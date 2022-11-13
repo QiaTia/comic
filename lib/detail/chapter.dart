@@ -157,7 +157,7 @@ class _GridDemoPhotoItem extends StatelessWidget {
 
     return InkWell(
         onTap: () {
-          Navigator.pushNamed(context, 'detail', arguments: item);
+          Navigator.pushNamed(context, '/detail', arguments: item.id);
         },
         child: GridTile(
           footer: Material(
