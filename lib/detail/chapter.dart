@@ -185,10 +185,13 @@ class _GridTitleText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: AlignmentDirectional.centerStart,
-      child: Text(text),
+    return Tooltip(
+      message: text,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: AlignmentDirectional.centerStart,
+        child: Text(text, overflow: TextOverflow.ellipsis),
+      ),
     );
   }
 }
