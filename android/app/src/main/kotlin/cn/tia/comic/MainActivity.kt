@@ -1,4 +1,4 @@
-package com.example.comic
+package cn.tia.comic
 
 import io.flutter.embedding.android.FlutterActivity
 
