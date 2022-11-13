@@ -14,12 +14,15 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'R18 Comic',
+      debugShowCheckedModeBanner: false,
       routes: {
         "/": (context) => const MyHomePage(title: 'R18 Comic'),
-        "chapter": (context) => const ComicChapter(id: 3),
-        "detail": (context, {arguments}) {
-          print(arguments.toString());
-          return ComicDetail(id: arguments.toString());
+        "/chapter": (context, {arguments}) => ComicChapter(
+            id: int.parse(
+                ModalRoute.of(context)!.settings.arguments.toString())),
+        "/detail": (context) {
+          return ComicDetail(
+              id: ModalRoute.of(context)!.settings.arguments.toString());
         }
       },
       theme: ThemeData(
@@ -32,7 +35,7 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.amber,
       ),
     );
   }
@@ -79,59 +82,35 @@ class _MyHomePageState extends State<MyHomePage> {
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-        actions: [
-          IconButton(
-              onPressed: () {
-                Navigator.pushNamed(context, 'chapter');
-              },
-              icon: const Icon(Icons.workspaces)),
-          IconButton(
-              onPressed: () {
-                Navigator.of(context).pushNamed('detail',
-                    arguments: "535d8a97cf5254ed8ec469fddf2a1903");
-              },
-              icon: const Icon(Icons.share))
-        ],
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
+        appBar: AppBar(
+          // Here we take the value from the MyHomePage object that was created by
+          // the App.build method, and use it to set our appbar title.
+          title: Text(widget.title),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              ElevatedButton(
+                child: const Text('CosPlay'),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/chapter', arguments: 3);
+                },
+              ),
+              ElevatedButton(
+                child: const Text('日漫'),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/chapter', arguments: 2);
+                },
+              ),
+              ElevatedButton(
+                child: const Text('韩漫'),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/chapter', arguments: 1);
+                },
+              ),
+            ],
+          ),
+        ));
   }
 }

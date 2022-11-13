@@ -1,6 +1,7 @@
-# comic
+# R18 Comic 
 
-A new Flutter project.
+A R18 Comic Flutter App project.
+lean flutter & dart project.
 
 ## Getting Started
 
