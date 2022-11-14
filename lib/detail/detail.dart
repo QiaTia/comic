@@ -70,7 +70,9 @@ class _ComicDetail extends State<ComicDetail> {
                       Expanded(
                           flex: 1,
                           child: ListView.builder(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              physics: const ClampingScrollPhysics(), //去掉弹性,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 24, horizontal: 8),
                               itemCount: _photos.length,
                               itemBuilder: (context, index) => _ListPhotoItem(
                                     item: _photos[index],
@@ -85,14 +87,25 @@ class _ListPhotoItem extends StatelessWidget {
   final _Photo item;
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      child: Image.network(
-        item.url,
-        fit: BoxFit.fitWidth,
-      ),
-      onTap: () {
-        // Todo 点击查看大图
-      },
-    );
+    return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+      return InkWell(
+        child: Image(
+          image: ResizeImage(
+            NetworkImage(item.url),
+            width: constraints.maxWidth.toInt(),
+          ),
+          fit: BoxFit.fitWidth,
+        ),
+        // Image.network(
+        //   item.url,
+        //   width: constraints.maxWidth,
+        //   fit: BoxFit.fitWidth,
+        // ),
+        onTap: () {
+          // Todo 点击查看大图
+        },
+      );
+    });
   }
 }

@@ -3,11 +3,11 @@ import '../utlis/api.dart';
 
 class ComicChapter extends StatefulWidget {
   const ComicChapter(
-      {super.key, this.currentPage = 1, this.currentTag = 0, required this.id});
+      {super.key, this.page = 1, this.tag = 0, required this.id});
 
   final int id;
-  final int currentPage;
-  final int currentTag;
+  final int page;
+  final int tag;
 
   @override
   State<ComicChapter> createState() => _ComicChapter();
@@ -16,7 +16,9 @@ class ComicChapter extends StatefulWidget {
 class _ComicChapter extends State<ComicChapter> {
   String name = '';
   List<String> tags = [];
-  int totalPage = 0;
+  int totalPage = 1;
+  int currentPage = 1;
+  int currentTag = 0;
   bool isLoading = true;
   List<ChapterItemProp> list = [];
 
@@ -30,14 +32,29 @@ class _ComicChapter extends State<ComicChapter> {
     });
   }
 
+  void getData({int? page, int? tag}) {
+    setState(() {
+      if (page != null) currentPage = page;
+      if (tag != null) currentTag = tag;
+    });
+    getChapter();
+  }
+
+  void getChapter() {
+    setState(() {
+      isLoading = true;
+    });
+    apiServer.getChapter(widget.id, currentPage, currentTag).then((result) {
+      setChapterData(result);
+    });
+  }
+
   @override
   void initState() {
     super.initState();
-    apiServer
-        .getChapter(widget.id, widget.currentPage, widget.currentTag)
-        .then((result) {
-      setChapterData(result);
-    });
+    currentPage = widget.page;
+    currentTag = widget.tag;
+    getChapter();
   }
 
   @override
@@ -57,73 +74,32 @@ class _ComicChapter extends State<ComicChapter> {
               )
             : Column(
                 children: [
-                  Expanded(
-                      child: GridView.count(
-                    restorationId: 'grid_view_demo_grid_offset',
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    padding: const EdgeInsets.all(8),
-                    childAspectRatio: 1,
-                    children: list.map<Widget>((item) {
-                      return _GridDemoPhotoItem(
-                        item: item,
-                      );
-                    }).toList(),
-                  )),
+                  Expanded(child: _GridPhotoList(list: list)),
                   const Padding(padding: EdgeInsets.all(8)),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: widget.currentPage == 1
+                            backgroundColor: currentPage == 1
                                 ? const Color(0xFFF9F9F9)
                                 : null),
                         onPressed: () {
                           /** 上一页 */
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => ComicChapter(
-                                        id: widget.id,
-                                        currentPage: widget.currentPage - 1,
-                                      )));
+                          getData(page: currentPage - 1);
                         },
                         child: const Text('上一页'),
                       ),
                       const Padding(padding: EdgeInsets.all(8)),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: widget.currentPage == totalPage
+                            backgroundColor: currentPage == totalPage
                                 ? const Color(0xFFF9F9F9)
                                 : null),
                         child: const Text("下一页"),
                         onPressed: () {
                           /** 下一页 */
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => ComicChapter(
-                                        id: widget.id,
-                                        currentPage: widget.currentPage + 1,
-                                      )));
-                          // Navigator.replace(
-                          //   context,
-                          //   oldRoute: MaterialPageRoute(builder: (context) {
-                          //     return ComicChapter(
-                          //       id: widget.id,
-                          //       currentPage: widget.currentPage,
-                          //       currentTag: widget.currentTag,
-                          //     );
-                          //   }),
-                          //   newRoute: MaterialPageRoute(builder: (context) {
-                          //     return ComicChapter(
-                          //       id: widget.id,
-                          //       currentPage: widget.currentPage + 1,
-                          //     );
-                          //   }),
-                          // );
+                          getData(page: currentPage + 1);
                         },
                       )
                     ],
@@ -134,8 +110,38 @@ class _ComicChapter extends State<ComicChapter> {
   }
 }
 
-class _GridDemoPhotoItem extends StatelessWidget {
-  const _GridDemoPhotoItem({
+class _GridPhotoList extends StatefulWidget {
+  const _GridPhotoList({Key? key, required this.list}) : super(key: key);
+  final List<ChapterItemProp> list;
+  @override
+  State<_GridPhotoList> createState() => __GridPhotoList();
+}
+
+class __GridPhotoList extends State<_GridPhotoList> {
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+      var crossAxisCount = constraints.maxWidth > constraints.maxHeight ? 4 : 3;
+      return GridView.count(
+        restorationId: 'grid_view_demo_grid_offset',
+        crossAxisCount: crossAxisCount.toInt(),
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        childAspectRatio: 1,
+        children: widget.list.map<Widget>((item) {
+          return _GridPhotoItem(
+            item: item,
+          );
+        }).toList(),
+      );
+    });
+  }
+}
+
+class _GridPhotoItem extends StatelessWidget {
+  const _GridPhotoItem({
     Key? key,
     required this.item,
   }) : super(key: key);
