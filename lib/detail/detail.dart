@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../utlis/api.dart';
+import './gallery.dart';
 
 class ComicDetail extends StatefulWidget {
   const ComicDetail({super.key, this.page = 1, required this.id});
@@ -96,7 +97,11 @@ class __PhotoListWidget extends State<_PhotoList> {
         //重新构建列表
         _list.insertAll(
           start,
-          widget.list.sublist(start, start + 10),
+          widget.list.sublist(
+              start,
+              start + 10 > widget.list.length - 1
+                  ? widget.list.length - 1
+                  : start + 10),
         );
       });
     });
@@ -147,6 +152,8 @@ class __PhotoListWidget extends State<_PhotoList> {
             item: _list[index],
             onTap: () {
               // Todo 点击查看大图
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => GalleryList(list: [_list[index].url])));
             },
           );
         });

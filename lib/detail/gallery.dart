@@ -13,19 +13,22 @@ class GalleryList extends StatefulWidget {
 
 class _GalleryList extends State<GalleryList> {
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PhotoViewGallery.builder(
       scrollPhysics: const BouncingScrollPhysics(),
       builder: (BuildContext context, int index) {
-        return CachedNetworkImage(
-                imageUrl: widget.list[index],
-                imageBuilder: (context, imageProvider) {
-                  return PhotoViewGalleryPageOptions(
-                    initialScale: PhotoViewComputedScale.contained * 0.8,
-                    imageProvider:imageProvider );
-                );
+        return PhotoViewGalleryPageOptions(
+          imageProvider: CachedNetworkImageProvider(widget.list[index]),
+          initialScale: PhotoViewComputedScale.contained * 0.8,
+          // heroAttributes: PhotoViewHeroAttributes(tag: galleryItems[index].id),
+        );
       },
-      itemCount: widget.list.length,
+      itemCount: widget.list.length - 1,
       loadingBuilder: (context, event) => Center(
         child: SizedBox(
           width: 20.0,

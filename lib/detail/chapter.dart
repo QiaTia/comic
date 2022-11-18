@@ -74,22 +74,28 @@ class _ComicChapter extends State<ComicChapter> {
               )
             : Column(
                 children: [
-                  ListView(
-                      children: tags.asMap().keys.map((i) {
-                    if (currentTag == i) {
-                      return ElevatedButton(
-                        child: Text(tags[i]),
-                        onPressed: () {},
-                      );
-                    } else {
-                      return TextButton(
-                          onPressed: () {
-                            getData(tag: i);
-                          },
-                          child: Text(tags[i]));
-                    }
-                  }).toList()),
-                  const Padding(padding: EdgeInsets.all(8)),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: SizedBox(
+                      height: 32,
+                      child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: tags.asMap().keys.map((i) {
+                            if (currentTag == i) {
+                              return ElevatedButton(
+                                child: Text(tags[i]),
+                                onPressed: () {},
+                              );
+                            } else {
+                              return TextButton(
+                                  onPressed: () {
+                                    getData(tag: i);
+                                  },
+                                  child: Text(tags[i]));
+                            }
+                          }).toList()),
+                    ),
+                  ),
                   Expanded(child: _GridPhotoList(list: list)),
                   const Padding(padding: EdgeInsets.all(8)),
                   Row(
@@ -148,10 +154,11 @@ class __GridPhotoList extends State<_GridPhotoList> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-      var crossAxisCount = constraints.maxWidth > constraints.maxHeight ? 4 : 2;
+      var crossAxisCount = constraints.maxWidth /
+          175; // constraints.maxWidth > constraints.maxHeight ? 4 : 2;
       return GridView.count(
         restorationId: 'grid_view_demo_grid_offset',
-        crossAxisCount: crossAxisCount.toInt(),
+        crossAxisCount: crossAxisCount > 5 ? 5 : crossAxisCount.toInt(),
         mainAxisSpacing: 8,
         crossAxisSpacing: 8,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
@@ -200,8 +207,8 @@ class _GridPhotoItem extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: GridTileBar(
               backgroundColor: Colors.black45,
-              title: _GridTitleText(item.title),
-              // subtitle: _GridTitleText(photo.subtitle),
+              // title: _GridTitleText(item.title),
+              subtitle: _GridTitleText(item.title),
             ),
           ),
           child: image,

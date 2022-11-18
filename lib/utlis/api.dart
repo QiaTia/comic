@@ -20,7 +20,8 @@ class APIServer {
     List<Element> pageElement =
         document.querySelectorAll('.stui-page > li >  a');
     String pageTemp = pageElement.last.attributes['href']!.split('-').last;
-    int totalPage = int.parse(pageTemp.split(".").first);
+    int totalPage = int.parse(
+        pageTemp == 'javascript:void(0)' ? '1' : pageTemp.split(".").first);
     /** 数据列表获取 */
     List<ChapterItemProp> chapterList = [];
     List<Element> listElement =
