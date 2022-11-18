@@ -59,58 +59,78 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  List tabs = ["CosPlay", "日漫", "韩漫"];
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: tabs.length, vsync: this);
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
         appBar: AppBar(
-          // Here we take the value from the MyHomePage object that was created by
-          // the App.build method, and use it to set our appbar title.
           title: Text(widget.title),
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: <Widget>[
-              ElevatedButton(
-                child: const Text('CosPlay'),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/chapter', arguments: 3);
-                },
-              ),
-              ElevatedButton(
-                child: const Text('日漫'),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/chapter', arguments: 2);
-                },
-              ),
-              ElevatedButton(
-                child: const Text('韩漫'),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/chapter', arguments: 1);
-                },
-              ),
-            ],
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: tabs.map((e) => Tab(text: e)).toList(),
           ),
+        ),
+        body: TabBarView(
+          //构建
+          controller: _tabController,
+          children: tabs
+              .asMap()
+              .keys
+              .map((i) => KeepAliveWrapper(
+                      child: ComicChapter(
+                    id: (i + -3).abs(),
+                  )))
+              .toList(),
         ));
   }
+
+  @override
+  void dispose() {
+    // 释放资源
+    _tabController.dispose();
+    super.dispose();
+  }
+}
+
+class KeepAliveWrapper extends StatefulWidget {
+  const KeepAliveWrapper({
+    Key? key,
+    this.keepAlive = true,
+    required this.child,
+  }) : super(key: key);
+  final bool keepAlive;
+  final Widget child;
+
+  @override
+  _KeepAliveWrapperState createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
+
+  @override
+  void didUpdateWidget(covariant KeepAliveWrapper oldWidget) {
+    if (oldWidget.keepAlive != widget.keepAlive) {
+      // keepAlive 状态需要更新，实现在 AutomaticKeepAliveClientMixin 中
+      updateKeepAlive();
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  bool get wantKeepAlive => widget.keepAlive;
 }

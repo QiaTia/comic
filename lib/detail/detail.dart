@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../utlis/api.dart';
 
 class ComicDetail extends StatefulWidget {
@@ -69,41 +70,120 @@ class _ComicDetail extends State<ComicDetail> {
                     children: [
                       Expanded(
                           flex: 1,
-                          child: ListView.builder(
-                              physics: const ClampingScrollPhysics(), //去掉弹性,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 24, horizontal: 8),
-                              itemCount: _photos.length,
-                              itemBuilder: (context, index) => _ListPhotoItem(
-                                    item: _photos[index],
-                                  )))
+                          child: _PhotoList(
+                            list: _photos,
+                          ))
                     ],
                   )));
   }
 }
 
+class _PhotoList extends StatefulWidget {
+  _PhotoList({required this.list});
+  List<_Photo> list;
+  @override
+  State<StatefulWidget> createState() => __PhotoListWidget();
+}
+
+class __PhotoListWidget extends State<_PhotoList> {
+  static const loadingTag = "##loading##"; //表尾标记
+  final _list = <_Photo>[_Photo(title: loadingTag, url: '')];
+
+  void _retrieveData() {
+    Future.delayed(const Duration(milliseconds: 100)).then((e) {
+      setState(() {
+        int start = _list.length - 1;
+        //重新构建列表
+        _list.insertAll(
+          start,
+          widget.list.sublist(start, start + 10),
+        );
+      });
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _retrieveData();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+        physics: const ClampingScrollPhysics(), //去掉弹性,
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+        itemCount: _list.length,
+        itemBuilder: (context, index) {
+          //如果到了表尾
+          if (_list[index].title == loadingTag) {
+            //不足100条，继续获取数据
+            if (_list.length - 1 <= widget.list.length - 1) {
+              //获取数据
+              _retrieveData();
+              //加载时显示loading
+              return Container(
+                padding: const EdgeInsets.all(16.0),
+                alignment: Alignment.center,
+                child: const SizedBox(
+                  width: 24.0,
+                  height: 24.0,
+                  child: CircularProgressIndicator(strokeWidth: 2.0),
+                ),
+              );
+            } else {
+              //已经加载了100条数据，不再获取数据。
+              return Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(16.0),
+                child: const Text(
+                  "已经看完咯!",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              );
+            }
+          }
+          return _ListPhotoItem(
+            item: _list[index],
+            onTap: () {
+              // Todo 点击查看大图
+            },
+          );
+        });
+  }
+}
+
+typedef _ListPhotoItemTap = void Function();
+
 class _ListPhotoItem extends StatelessWidget {
-  const _ListPhotoItem({Key? key, required this.item}) : super(key: key);
+  const _ListPhotoItem({Key? key, required this.item, this.onTap})
+      : super(key: key);
   final _Photo item;
+  final _ListPhotoItemTap? onTap;
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
       return InkWell(
-        child: Image(
-          image: ResizeImage(
-            NetworkImage(item.url),
-            width: constraints.maxWidth.toInt(),
-          ),
-          fit: BoxFit.fitWidth,
-        ),
+        child: Container(
+            width: constraints.maxWidth,
+            constraints: const BoxConstraints(minHeight: 250),
+            child: Center(
+              child: CachedNetworkImage(
+                imageUrl: item.url,
+                fit: BoxFit.fitWidth,
+                progressIndicatorBuilder: (context, url, downloadProgress) =>
+                    CircularProgressIndicator(value: downloadProgress.progress),
+                errorWidget: (context, url, error) => const Icon(Icons.error),
+              ),
+            )),
         // Image.network(
         //   item.url,
         //   width: constraints.maxWidth,
         //   fit: BoxFit.fitWidth,
         // ),
         onTap: () {
-          // Todo 点击查看大图
+          onTap!();
         },
       );
     });

@@ -60,9 +60,9 @@ class _ComicChapter extends State<ComicChapter> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text(name),
-        ),
+        // appBar: AppBar(
+        //   title: Text(name),
+        // ),
         body: isLoading
             ? Center(
                 child: Column(children: const [
@@ -74,6 +74,22 @@ class _ComicChapter extends State<ComicChapter> {
               )
             : Column(
                 children: [
+                  Wrap(
+                      children: tags.asMap().keys.map((i) {
+                    if (currentTag == i) {
+                      return ElevatedButton(
+                        child: Text(tags[i]),
+                        onPressed: () {},
+                      );
+                    } else {
+                      return TextButton(
+                          onPressed: () {
+                            getData(tag: i);
+                          },
+                          child: Text(tags[i]));
+                    }
+                  }).toList()),
+                  const Padding(padding: EdgeInsets.all(8)),
                   Expanded(child: _GridPhotoList(list: list)),
                   const Padding(padding: EdgeInsets.all(8)),
                   Row(
@@ -85,6 +101,11 @@ class _ComicChapter extends State<ComicChapter> {
                                 ? const Color(0xFFF9F9F9)
                                 : null),
                         onPressed: () {
+                          if (currentPage <= 1) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('已经是第一页了!')));
+                            return;
+                          }
                           /** 上一页 */
                           getData(page: currentPage - 1);
                         },
@@ -98,6 +119,11 @@ class _ComicChapter extends State<ComicChapter> {
                                 : null),
                         child: const Text("下一页"),
                         onPressed: () {
+                          if (currentPage >= totalPage) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('已经是最后一页了!')));
+                            return;
+                          }
                           /** 下一页 */
                           getData(page: currentPage + 1);
                         },
@@ -122,7 +148,7 @@ class __GridPhotoList extends State<_GridPhotoList> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
-      var crossAxisCount = constraints.maxWidth > constraints.maxHeight ? 4 : 3;
+      var crossAxisCount = constraints.maxWidth > constraints.maxHeight ? 4 : 2;
       return GridView.count(
         restorationId: 'grid_view_demo_grid_offset',
         crossAxisCount: crossAxisCount.toInt(),
@@ -193,11 +219,7 @@ class _GridTitleText extends StatelessWidget {
   Widget build(BuildContext context) {
     return Tooltip(
       message: text,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: AlignmentDirectional.centerStart,
-        child: Text(text, overflow: TextOverflow.ellipsis),
-      ),
+      child: Text(text, overflow: TextOverflow.ellipsis),
     );
   }
 }
