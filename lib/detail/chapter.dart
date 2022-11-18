@@ -74,7 +74,7 @@ class _ComicChapter extends State<ComicChapter> {
               )
             : Column(
                 children: [
-                  Wrap(
+                  ListView(
                       children: tags.asMap().keys.map((i) {
                     if (currentTag == i) {
                       return ElevatedButton(

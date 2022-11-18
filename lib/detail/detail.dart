@@ -118,7 +118,7 @@ class __PhotoListWidget extends State<_PhotoList> {
           //如果到了表尾
           if (_list[index].title == loadingTag) {
             //不足100条，继续获取数据
-            if (_list.length - 1 <= widget.list.length - 1) {
+            if (_list.length - 1 < widget.list.length - 1) {
               //获取数据
               _retrieveData();
               //加载时显示loading
@@ -135,7 +135,7 @@ class __PhotoListWidget extends State<_PhotoList> {
               //已经加载了100条数据，不再获取数据。
               return Container(
                 alignment: Alignment.center,
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: const Text(
                   "已经看完咯!",
                   style: TextStyle(color: Colors.grey),
