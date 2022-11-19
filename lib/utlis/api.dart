@@ -67,6 +67,43 @@ class APIServer {
 
     // });
   }
+
+  Future<ChapterProp> getSearch(String val, [int page = 1]) async {
+    final content = await httpService.get("/search.php?key=$val&p=$page");
+    Document document =
+        parse(content.putIfAbsent("data", () => "<html></html>"));
+    /** 获取分类名称 */
+    String name = '';
+    /** 组合标签信息 */
+    List<String> tags = [];
+    /** 获取分页列表 */
+    List<Element> pageElement =
+        document.querySelectorAll('.stui-page > li >  a');
+    String pageTemp = pageElement.last.attributes['href']!;
+    int totalPage = int.parse(
+        pageTemp == 'javascript:void(0)' ? '1' : pageTemp.split("=").last);
+    /** 数据列表获取 */
+    List<ChapterItemProp> chapterList = [];
+    List<Element> listElement =
+        document.querySelectorAll('.content > .top-grids > .group > a');
+    RegExp reg = RegExp(r"(?<=url\(\')\S+(?=\')");
+    for (var element in listElement) {
+      var link = element.attributes['href']!.split('-')[1];
+      var title = element.querySelector('.topgrid-desc')!.text.trim();
+      var imageTemp =
+          element.querySelector('.top_grid > div')!.attributes['style']!;
+      // print(imageTemp);
+      var image = reg.allMatches(imageTemp).first[0]!;
+      // print('$title name is $link !');
+      chapterList.add(ChapterItemProp(title: title, id: link, image: image));
+    }
+    return ChapterProp(
+        currentPage: page,
+        name: name,
+        list: chapterList,
+        tags: tags,
+        totalPage: totalPage);
+  }
 }
 
 class DetailProp {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../utlis/image.dart';
 
 class GalleryList extends StatefulWidget {
   GalleryList(
@@ -58,11 +59,33 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
           ),
           Positioned(
             //图片index显示
-            top: MediaQuery.of(context).padding.top + 15,
+            bottom: 10,
             width: MediaQuery.of(context).size.width,
             child: Center(
               child: Text("${currentIndex + 1}/${widget.list.length}",
                   style: const TextStyle(color: Colors.white, fontSize: 16)),
+            ),
+          ),
+          Positioned(
+            //图片index显示
+            bottom: 10,
+            right: 10,
+            child: IconButton(
+              icon: const Icon(
+                Icons.download,
+                size: 30,
+                color: Colors.white,
+              ),
+              onPressed: () async {
+                var promise =
+                    await ImageUtil.saveImage(widget.list[widget.index]);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(
+                  promise ? "Sucess!" : "Fail!",
+                  style: TextStyle(
+                      color: promise ? Colors.white : const Color(0xFFFF4081)),
+                )));
+              },
             ),
           ),
           Positioned(

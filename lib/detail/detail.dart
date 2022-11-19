@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../Widget/route_animation.dart';
 import '../utlis/api.dart';
 import './gallery.dart';
 
@@ -49,6 +50,7 @@ class _ComicDetail extends State<ComicDetail> {
         addItem(element);
       }
     });
+    apiServer.getSearch('老师').then((value) => print(value.totalPage));
   }
 
   @override
@@ -198,27 +200,4 @@ class _ListPhotoItem extends StatelessWidget {
       );
     });
   }
-}
-
-class FadeRoute extends PageRouteBuilder {
-  final Widget page;
-  FadeRoute({required this.page})
-      : super(
-          pageBuilder: (
-            BuildContext context,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-          ) =>
-              page,
-          transitionsBuilder: (
-            BuildContext context,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-            Widget child,
-          ) =>
-              FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
-        );
 }

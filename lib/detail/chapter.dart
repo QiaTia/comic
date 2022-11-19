@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../Widget/grid_photo_list.dart';
+import '../Widget/pagination.dart';
 import '../utlis/api.dart';
 
 class ComicChapter extends StatefulWidget {
@@ -96,135 +98,13 @@ class _ComicChapter extends State<ComicChapter> {
                           }).toList()),
                     ),
                   ),
-                  Expanded(child: _GridPhotoList(list: list)),
-                  const Padding(padding: EdgeInsets.all(8)),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: currentPage == 1
-                                ? const Color(0xFFF9F9F9)
-                                : null),
-                        onPressed: () {
-                          if (currentPage <= 1) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('已经是第一页了!')));
-                            return;
-                          }
-                          /** 上一页 */
-                          getData(page: currentPage - 1);
-                        },
-                        child: const Text('上一页'),
-                      ),
-                      const Padding(padding: EdgeInsets.all(8)),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: currentPage == totalPage
-                                ? const Color(0xFFF9F9F9)
-                                : null),
-                        child: const Text("下一页"),
-                        onPressed: () {
-                          if (currentPage >= totalPage) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('已经是最后一页了!')));
-                            return;
-                          }
-                          /** 下一页 */
-                          getData(page: currentPage + 1);
-                        },
-                      )
-                    ],
-                  ),
-                  const Padding(padding: EdgeInsets.all(8)),
+                  Expanded(child: GridPhotoList(list: list)),
+                  Pagination(
+                    current: currentPage,
+                    total: totalPage,
+                    onChange: (page) => getData(page: page),
+                  )
                 ],
               ));
-  }
-}
-
-class _GridPhotoList extends StatefulWidget {
-  const _GridPhotoList({Key? key, required this.list}) : super(key: key);
-  final List<ChapterItemProp> list;
-  @override
-  State<_GridPhotoList> createState() => __GridPhotoList();
-}
-
-class __GridPhotoList extends State<_GridPhotoList> {
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-      var crossAxisCount = constraints.maxWidth /
-          175; // constraints.maxWidth > constraints.maxHeight ? 4 : 2;
-      return GridView.count(
-        restorationId: 'grid_view_demo_grid_offset',
-        crossAxisCount: crossAxisCount > 5 ? 5 : crossAxisCount.toInt(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        childAspectRatio: 1,
-        children: widget.list.map<Widget>((item) {
-          return _GridPhotoItem(
-            item: item,
-          );
-        }).toList(),
-      );
-    });
-  }
-}
-
-class _GridPhotoItem extends StatelessWidget {
-  const _GridPhotoItem({
-    Key? key,
-    required this.item,
-  }) : super(key: key);
-
-  final ChapterItemProp item;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget image = Material(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-      clipBehavior: Clip.antiAlias,
-      child: Image.network(
-        item.image,
-        fit: BoxFit.cover,
-      ),
-    );
-
-    return InkWell(
-        onTap: () {
-          Navigator.pushNamed(context, '/detail', arguments: item.id);
-        },
-        child: GridTile(
-          footer: Material(
-            color: Colors.transparent,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(4)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: GridTileBar(
-              backgroundColor: Colors.black45,
-              // title: _GridTitleText(item.title),
-              subtitle: _GridTitleText(item.title),
-            ),
-          ),
-          child: image,
-        ));
-  }
-}
-
-/// Allow the text size to shrink to fit in the space
-class _GridTitleText extends StatelessWidget {
-  const _GridTitleText(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: text,
-      child: Text(text, overflow: TextOverflow.ellipsis),
-    );
   }
 }

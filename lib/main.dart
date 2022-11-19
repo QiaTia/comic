@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'detail/detail.dart';
 import 'detail/chapter.dart';
+import 'detail/search.dart';
+import './Widget/route_animation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -74,6 +76,15 @@ class _MyHomePageState extends State<MyHomePage>
     return Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
+          actions: [
+            IconButton(
+                tooltip: 'Search',
+                onPressed: () {
+                  Navigator.push(context, FadeRoute(page: SearchPage()));
+                },
+                icon: const Icon(Icons.search)),
+            const Padding(padding: EdgeInsets.symmetric(horizontal: 8))
+          ],
           bottom: TabBar(
             controller: _tabController,
             tabs: tabs.map((e) => Tab(text: e)).toList(),
