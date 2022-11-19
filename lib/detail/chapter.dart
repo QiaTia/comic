@@ -89,7 +89,7 @@ class _ComicChapter extends State<ComicChapter> {
                             } else {
                               return TextButton(
                                   onPressed: () {
-                                    getData(tag: i);
+                                    getData(tag: i, page: 1);
                                   },
                                   child: Text(tags[i]));
                             }
@@ -180,8 +180,6 @@ class _GridPhotoItem extends StatelessWidget {
   }) : super(key: key);
 
   final ChapterItemProp item;
-
-  get arguments => null;
 
   @override
   Widget build(BuildContext context) {

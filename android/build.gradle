@@ -1,8 +1,24 @@
 buildscript {
     ext.kotlin_version = '1.6.10'
     repositories {
-        google()
-        mavenCentral()
+        // google()
+        // mavenCentral()
+        maven { 
+             allowInsecureProtocol = true
+            url 'https://maven.aliyun.com/repository/google'
+        }
+        maven {
+             allowInsecureProtocol = true
+            url 'https://maven.aliyun.com/repository/jcenter'
+        }
+        maven {
+            allowInsecureProtocol = true
+            url 'http://maven.aliyun.com/nexus/content/groups/public'
+        }
+        maven {
+            allowInsecureProtocol = true
+            url 'https://maven.aliyun.com/repository/gradle-plugin'
+        } 
     }
 
     dependencies {
@@ -13,8 +29,24 @@ buildscript {
 
 allprojects {
     repositories {
-        google()
-        mavenCentral()
+        // google()
+        // mavenCentral()
+        maven { 
+             allowInsecureProtocol = true
+            url 'https://maven.aliyun.com/repository/google'
+        }
+        maven {
+             allowInsecureProtocol = true
+            url 'https://maven.aliyun.com/repository/jcenter'
+        }
+        maven {
+            allowInsecureProtocol = true
+            url 'http://maven.aliyun.com/nexus/content/groups/public'
+        }
+        maven {
+            allowInsecureProtocol = true
+            url 'https://maven.aliyun.com/repository/gradle-plugin'
+        } 
     }
 }
 

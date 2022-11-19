@@ -152,8 +152,11 @@ class __PhotoListWidget extends State<_PhotoList> {
             item: _list[index],
             onTap: () {
               // Todo 点击查看大图
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => GalleryList(list: [_list[index].url])));
+              Navigator.of(context).push(FadeRoute(
+                  page: GalleryList(
+                list: widget.list.map((e) => e.url).toList(),
+                index: index,
+              )));
             },
           );
         });
@@ -195,4 +198,27 @@ class _ListPhotoItem extends StatelessWidget {
       );
     });
   }
+}
+
+class FadeRoute extends PageRouteBuilder {
+  final Widget page;
+  FadeRoute({required this.page})
+      : super(
+          pageBuilder: (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+          ) =>
+              page,
+          transitionsBuilder: (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondaryAnimation,
+            Widget child,
+          ) =>
+              FadeTransition(
+            opacity: animation,
+            child: child,
+          ),
+        );
 }
