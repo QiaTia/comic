@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../utlis/image.dart';
 
 class GalleryList extends StatefulWidget {
   GalleryList(
@@ -76,9 +75,8 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
                 size: 30,
                 color: Colors.white,
               ),
-              onPressed: () async {
-                var promise =
-                    await ImageUtil.saveImage(widget.list[widget.index]);
+              onPressed: () {
+                var promise = false;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(
                   promise ? "Sucess!" : "Fail!",
