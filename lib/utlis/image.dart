@@ -1,9 +1,6 @@
 /// 使用 File api
 import 'dart:io';
 
-/// 使用 Uint8List 数据类型
-import 'dart:typed_data';
-
 import 'package:flutter/services.dart';
 
 /// 使用 DefaultCacheManager 类（可能无法自动引入，需要手动引入）
