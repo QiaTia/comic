@@ -55,29 +55,28 @@ class _ComicDetail extends State<ComicDetail> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-        child: Scaffold(
-            appBar: AppBar(
-              title: Text(title),
-            ),
-            body: isLoading
-                ? Center(
-                    child: Column(children: const [
-                      Padding(padding: EdgeInsets.all(80)),
-                      CircularProgressIndicator(),
-                      Padding(padding: EdgeInsets.all(8)),
-                      Text("数据加载中!")
-                    ]),
-                  )
-                : Column(
-                    children: [
-                      Expanded(
-                          flex: 1,
-                          child: _PhotoList(
-                            list: _photos,
-                          ))
-                    ],
-                  )));
+    return Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+        ),
+        body: isLoading
+            ? Center(
+                child: Column(children: const [
+                  Padding(padding: EdgeInsets.all(80)),
+                  CircularProgressIndicator(),
+                  Padding(padding: EdgeInsets.all(8)),
+                  Text("数据加载中!")
+                ]),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                      flex: 1,
+                      child: _PhotoList(
+                        list: _photos,
+                      ))
+                ],
+              ));
   }
 }
 

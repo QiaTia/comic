@@ -35,3 +35,11 @@ Optimize package size where target platform!
 ```sh
 flutter build apk --target-platform android-arm,android-arm64,android-x64 --split-per-abi
 ```
+Optimize package size where confuse code !
+```sh
+flutter build apk --obfuscate --split-debug-info=debugInfo
+```
+Recommended
+```sh
+flutter build apk --obfuscate --split-debug-info=debugInfo --target-platform android-arm64 --split-per-abi
+```
