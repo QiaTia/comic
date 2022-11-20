@@ -1,9 +1,10 @@
 /// 使用 File api
+import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// 使用 DefaultCacheManager 类（可能无法自动引入，需要手动引入）
+/// 使用 DefaultCacheManager 类
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 /// 授权管理
@@ -17,9 +18,7 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 
 class ImageUtil {
   /// 保存图片到相册
-  ///
-  /// 默认为下载网络图片，如需下载资源图片，需要指定 [isAsset] 为 `true`。
-  static Future<bool> saveImage(String imageUrl, {bool isAsset = false}) async {
+  static Future<bool> saveImage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty) throw '保存失败，图片不存在！';
 
@@ -35,30 +34,25 @@ class ImageUtil {
       /// 保存的图片数据
       Uint8List imageBytes;
 
-      if (isAsset == true) {
-        /// 保存资源图片
-        ByteData bytes = await rootBundle.load(imageUrl);
-        imageBytes = bytes.buffer.asUint8List();
-      } else {
-        /// 保存网络图片
-        CachedNetworkImage image = CachedNetworkImage(imageUrl: imageUrl);
-        BaseCacheManager manager = image.cacheManager ?? DefaultCacheManager();
-        Map<String, String> headers = image.httpHeaders!;
-        File file = await manager.getSingleFile(
-          image.imageUrl,
-          headers: headers,
-        );
-        imageBytes = await file.readAsBytes();
-      }
+      /// 保存网络图片
+      CachedNetworkImage image = CachedNetworkImage(imageUrl: imageUrl);
+      print(image);
+      BaseCacheManager manager = image.cacheManager ?? DefaultCacheManager();
+      Map<String, String> headers = image.httpHeaders ?? {};
+      File file = await manager.getSingleFile(
+        image.imageUrl,
+        headers: headers,
+      );
+      imageBytes = await file.readAsBytes();
 
       /// 保存图片
-      final result = await ImageGallerySaver.saveImage(imageBytes);
-
-      if (result == null || result == '') throw '图片保存失败';
+      final result = Map<String, dynamic>.from(
+          await ImageGallerySaver.saveImage(imageBytes));
+      if (!result.containsValue(true)) throw result;
       print("保存成功");
       return true;
     } catch (e) {
-      print(e.toString());
+      print(e);
       return false;
     }
   }
