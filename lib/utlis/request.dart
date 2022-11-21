@@ -21,13 +21,14 @@ class _HttpService {
     return false;
   }
 
-  Uri _parseUrl(String url, RequestOptions? options) {
-    if (false == _isExternalUrl(url)) {
-      url = API_HOST + url;
-    }
+  completionUri(String url) {
+    if (false == _isExternalUrl(url)) url = API_HOST + url;
+    return url;
+  }
 
-    Uri result = Uri.parse(url);
-    if (options != null && options.params != null) {
+  Uri _parseUrl(String url, RequestOptions? options) {
+    Uri result = Uri.parse(completionUri(url));
+    if (options != null) {
       result = result.replace(queryParameters: options.params);
     }
 

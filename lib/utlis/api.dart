@@ -28,14 +28,17 @@ class APIServer {
         document.querySelectorAll('.content > .top-grids > .group > a');
     RegExp reg = RegExp(r"(?<=url\(\')\S+(?=\')");
     for (var element in listElement) {
-      var link = element.attributes['href']!.split('-')[1];
+      var link = element.attributes['href']!
+          .split('-')[1]
+          .replaceAll(RegExp('.html\$'), '');
       var title = element.querySelector('.topgrid-desc')!.text.trim();
       var imageTemp =
           element.querySelector('.top_grid > div')!.attributes['style']!;
       // print(imageTemp);
       var image = reg.allMatches(imageTemp).first[0]!;
       // print('$title name is $link !');
-      chapterList.add(ChapterItemProp(title: title, id: link, image: image));
+      chapterList.add(ChapterItemProp(
+          title: title, id: link, image: httpService.completionUri(image)));
     }
     return ChapterProp(
         currentPage: page,
@@ -57,7 +60,7 @@ class APIServer {
       for (var element in images) {
         var url = element.attributes['data-original']!;
         if (url.isNotEmpty) {
-          data.add(url);
+          data.add(httpService.completionUri(url));
         }
       }
     }

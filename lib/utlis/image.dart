@@ -48,9 +48,8 @@ class ImageUtil {
       /// 保存图片
       final result = Map<String, dynamic>.from(
           await ImageGallerySaver.saveImage(imageBytes));
-      if (!result.containsValue(true)) throw result;
-      print("保存成功");
-      return true;
+      if (!result.putIfAbsent('isSuccess', () => false)) return true;
+      throw result;
     } catch (e) {
       print(e);
       return false;

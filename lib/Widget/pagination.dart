@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 typedef ValueChanged = void Function(int page);
 
@@ -33,6 +34,33 @@ class _Pagination extends State<Pagination> {
                 widget.onChange!(widget.current - 1);
               },
               child: const Text('上一页'),
+            ),
+            const Padding(padding: EdgeInsets.all(8)),
+            SizedBox(
+              width: 58,
+              child: TextField(
+                textAlignVertical: TextAlignVertical.center,
+                textAlign: TextAlign.center,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[0-9]')) //设置只允许输入数字
+                ],
+                textInputAction: TextInputAction.go,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: '${widget.current} / ${widget.total}',
+                ),
+                onSubmitted: (value) {
+                  if (value.isEmpty) return;
+                  var targetPage = int.parse(value);
+                  if (targetPage > widget.total) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('只有${widget.total}页!')));
+                    return;
+                  }
+                  widget.onChange!(targetPage);
+                },
+              ),
             ),
             const Padding(padding: EdgeInsets.all(8)),
             ElevatedButton(
