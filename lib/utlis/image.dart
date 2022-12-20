@@ -48,7 +48,7 @@ class ImageUtil {
       /// 保存图片
       final result = Map<String, dynamic>.from(
           await ImageGallerySaver.saveImage(imageBytes));
-      if (!result.putIfAbsent('isSuccess', () => false)) return true;
+      if (result.putIfAbsent('isSuccess', () => false)) return true;
       throw result;
     } catch (e) {
       print(e);

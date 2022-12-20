@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../Widget/route_animation.dart';
 import '../utlis/api.dart';
 import './gallery.dart';
+import 'package:flutter/services.dart';
+// Obtain shared preferences.
 
 class ComicDetail extends StatefulWidget {
   const ComicDetail({super.key, this.page = 1, required this.id});
@@ -27,6 +29,7 @@ class _ComicDetail extends State<ComicDetail> {
   final List<_Photo> _photos = [];
   String title = "";
   bool isLoading = true;
+  bool isAppBar = true;
 
   void addItem(String url) {
     setState(() {
@@ -41,6 +44,18 @@ class _ComicDetail extends State<ComicDetail> {
     });
   }
 
+  void setAppBar() {
+    setState(() {
+      isAppBar = !isAppBar;
+    });
+    systemUiMode(isAppBar);
+  }
+
+  void systemUiMode([bool visible = false]) {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+        overlays: visible ? [SystemUiOverlay.top, SystemUiOverlay.bottom] : []);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -49,16 +64,24 @@ class _ComicDetail extends State<ComicDetail> {
       for (var element in result.data) {
         addItem(element);
       }
+      setAppBar();
     });
-    apiServer.getSearch('老师').then((value) => print(value.totalPage));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    systemUiMode(true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text(title),
-        ),
+        appBar: isAppBar
+            ? AppBar(
+                title: Text(title),
+              )
+            : null,
         body: isLoading
             ? Center(
                 child: Column(children: const [
@@ -68,20 +91,72 @@ class _ComicDetail extends State<ComicDetail> {
                   Text("数据加载中!")
                 ]),
               )
-            : Column(
-                children: [
-                  Expanded(
-                      flex: 1,
-                      child: _PhotoList(
-                        list: _photos,
-                      ))
-                ],
-              ));
+            : Stack(children: [
+                // AbsorbPointer
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    onTapDown: (detail) {},
+                    child: SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.4,
+                        height: MediaQuery.of(context).size.height / 3,
+                        child: Container(
+                            color: isAppBar
+                                ? Colors.black45
+                                : const Color.fromARGB(0, 255, 255, 255),
+                            child: Center(
+                              child: Text('Next',
+                                  style: TextStyle(
+                                      color: isAppBar
+                                          ? Colors.white
+                                          : const Color.fromARGB(
+                                              0, 255, 255, 255),
+                                      fontSize: 28),
+                                  textAlign: TextAlign.center),
+                            ))),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  child: InkWell(
+                    onTap: () {
+                      print('Last!');
+                    },
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.4,
+                      height: MediaQuery.of(context).size.height / 3,
+                      child: isAppBar
+                          ? Container(
+                              color: Colors.black45,
+                              child: const Center(
+                                child: Text('Last',
+                                    style: TextStyle(
+                                        color: Colors.white, fontSize: 28),
+                                    textAlign: TextAlign.center),
+                              ))
+                          : null,
+                    ),
+                  ),
+                ),
+
+                Positioned(
+                    child: Column(
+                  children: [
+                    Expanded(
+                        flex: 1,
+                        child: _PhotoList(list: _photos, onTap: setAppBar))
+                  ],
+                )),
+              ]));
   }
 }
 
 class _PhotoList extends StatefulWidget {
-  _PhotoList({required this.list});
+  _PhotoList({required this.list, this.onTap});
+  final _ListPhotoItemTap? onTap;
+
   List<_Photo> list;
   @override
   State<StatefulWidget> createState() => __PhotoListWidget();
@@ -90,7 +165,7 @@ class _PhotoList extends StatefulWidget {
 class __PhotoListWidget extends State<_PhotoList> {
   static const loadingTag = "##loading##"; //表尾标记
   final _list = <_Photo>[_Photo(title: loadingTag, url: '')];
-
+  final ScrollController _controller = ScrollController();
   void _retrieveData() {
     Future.delayed(const Duration(milliseconds: 100)).then((e) {
       setState(() {
@@ -118,8 +193,9 @@ class __PhotoListWidget extends State<_PhotoList> {
   Widget build(BuildContext context) {
     return ListView.builder(
         physics: const ClampingScrollPhysics(), //去掉弹性,
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+        // padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _list.length,
+        controller: _controller,
         itemBuilder: (context, index) {
           //如果到了表尾
           if (_list[index].title == loadingTag) {
@@ -152,6 +228,9 @@ class __PhotoListWidget extends State<_PhotoList> {
           return _ListPhotoItem(
             item: _list[index],
             onTap: () {
+              widget.onTap!();
+            },
+            onLongPress: () {
               // Todo 点击查看大图
               Navigator.of(context).push(FadeRoute(
                   page: GalleryList(
@@ -167,10 +246,12 @@ class __PhotoListWidget extends State<_PhotoList> {
 typedef _ListPhotoItemTap = void Function();
 
 class _ListPhotoItem extends StatelessWidget {
-  const _ListPhotoItem({Key? key, required this.item, this.onTap})
+  const _ListPhotoItem(
+      {Key? key, required this.item, this.onTap, this.onLongPress})
       : super(key: key);
   final _Photo item;
   final _ListPhotoItemTap? onTap;
+  final _ListPhotoItemTap? onLongPress;
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -178,7 +259,7 @@ class _ListPhotoItem extends StatelessWidget {
       return InkWell(
         child: Container(
             width: constraints.maxWidth,
-            constraints: const BoxConstraints(minHeight: 250),
+            constraints: const BoxConstraints(minHeight: 150),
             child: Center(
               child: CachedNetworkImage(
                 imageUrl: item.url,
@@ -193,6 +274,9 @@ class _ListPhotoItem extends StatelessWidget {
         //   width: constraints.maxWidth,
         //   fit: BoxFit.fitWidth,
         // ),
+        onLongPress: () {
+          onLongPress!();
+        },
         onTap: () {
           onTap!();
         },

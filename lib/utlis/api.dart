@@ -134,6 +134,13 @@ class ChapterItemProp {
   final String id;
   final String image;
   ChapterItemProp({required this.title, required this.id, required this.image});
+
+  // fromJson(Map<String, dynamic> json, this.title, this.id, this.image)
+  //     : title = json['title'],
+  //     id = json['id'],
+  //       image = json['image'];
+
+  Map<String, dynamic> toJson() => {'title': title, 'id': id, 'image': image};
 }
 
 final APIServer apiServer = APIServer();

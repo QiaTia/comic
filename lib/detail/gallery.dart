@@ -54,6 +54,13 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
                 setState(() {
                   currentIndex = index;
                 });
+                /** 画廊提前缓存两张图片 */
+                if (widget.list[index + 1].isNotEmpty) {
+                  CachedNetworkImageProvider(widget.list[index + 1]);
+                }
+                if (widget.list[index + 2].isNotEmpty) {
+                  CachedNetworkImageProvider(widget.list[index + 2]);
+                }
               },
             ),
           ),
@@ -78,7 +85,7 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
               ),
               onPressed: () async {
                 var promise =
-                    await ImageUtil.saveImage(widget.list[widget.index]);
+                    await ImageUtil.saveImage(widget.list[currentIndex]);
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(
                   promise ? "Sucess!" : "Fail!",

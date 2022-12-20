@@ -37,7 +37,7 @@ class _Pagination extends State<Pagination> {
             ),
             const Padding(padding: EdgeInsets.all(8)),
             SizedBox(
-              width: 58,
+              width: 98,
               child: TextField(
                 textAlignVertical: TextAlignVertical.center,
                 textAlign: TextAlign.center,

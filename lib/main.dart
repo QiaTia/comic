@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'detail/detail.dart';
 import 'detail/chapter.dart';
 import 'detail/search.dart';
+import 'detail/history.dart';
 import './Widget/route_animation.dart';
 
 void main() {
@@ -65,6 +66,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  DateTime? _lastPressedAt;
   List tabs = ["CosPlay", "日漫", "韩漫"];
   @override
   void initState() {
@@ -74,35 +76,56 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.title),
-          actions: [
-            IconButton(
-                tooltip: 'Search',
-                onPressed: () {
-                  Navigator.push(context, FadeRoute(page: SearchPage()));
-                },
-                icon: const Icon(Icons.search)),
-            const Padding(padding: EdgeInsets.symmetric(horizontal: 8))
-          ],
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: tabs.map((e) => Tab(text: e)).toList(),
-          ),
-        ),
-        body: TabBarView(
-          //构建
-          controller: _tabController,
-          children: tabs
-              .asMap()
-              .keys
-              .map((i) => KeepAliveWrapper(
-                      child: ComicChapter(
-                    id: (i + -3).abs(),
-                  )))
-              .toList(),
-        ));
+    return WillPopScope(
+        child: Scaffold(
+            appBar: AppBar(
+              title: Text(widget.title),
+              actions: [
+                IconButton(
+                    tooltip: 'History',
+                    onPressed: () {
+                      Navigator.push(
+                          context, FadeRoute(page: const ComicHistory()));
+                    },
+                    icon: const Icon(Icons.history)),
+                IconButton(
+                    tooltip: 'Search',
+                    onPressed: () {
+                      Navigator.push(
+                          context, FadeRoute(page: const SearchPage()));
+                    },
+                    icon: const Icon(Icons.search)),
+                const Padding(padding: EdgeInsets.symmetric(horizontal: 8))
+              ],
+              bottom: TabBar(
+                controller: _tabController,
+                tabs: tabs.map((e) => Tab(text: e)).toList(),
+              ),
+            ),
+            body: TabBarView(
+              //构建
+              controller: _tabController,
+              children: tabs
+                  .asMap()
+                  .keys
+                  .map((i) => KeepAliveWrapper(
+                          child: ComicChapter(
+                        id: (i + -3).abs(),
+                      )))
+                  .toList(),
+            )),
+        onWillPop: () async {
+          if (_lastPressedAt == null ||
+              DateTime.now().difference(_lastPressedAt!) >
+                  const Duration(seconds: 1)) {
+            //两次点击间隔超过1秒则重新计时
+            _lastPressedAt = DateTime.now();
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                duration: Duration(seconds: 1), content: Text('再次点击退出!')));
+            return false;
+          }
+          return true;
+        });
   }
 
   @override

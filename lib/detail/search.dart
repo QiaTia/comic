@@ -5,6 +5,7 @@ import '../Widget/white_data.dart';
 import '../utlis/api.dart';
 
 class SearchPage extends StatefulWidget {
+  const SearchPage({super.key});
   @override
   State<StatefulWidget> createState() => _SearchPage();
 }
@@ -33,7 +34,6 @@ class _SearchPage extends State<StatefulWidget> {
       }
     });
     apiServer.getSearch(val, currentPage).then((data) {
-      print(data.totalPage);
       setState(() {
         list = data.list;
         totalPage = data.totalPage;
@@ -59,42 +59,40 @@ class _SearchPage extends State<StatefulWidget> {
             color: Colors.white,
             borderRadius: const BorderRadius.all(Radius.circular(5.0)),
           ),
-          alignment: Alignment.topCenter,
-          height: 38,
-          child: Stack(alignment: Alignment.centerRight, children: [
-            TextField(
-                autofocus: true,
-                controller: _controller,
-                textAlignVertical: TextAlignVertical.center,
-                onSubmitted: (value) {
-                  if (value.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                        content: Text('Please enter content !')));
-                    return;
-                  }
-                  _getData(value);
-                },
-                onChanged: (value) {
-                  setState(() {
-                    _isShowDelete = value.isNotEmpty;
-                  });
-                },
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                    suffixIcon: _isShowDelete
-                        ? IconButton(
-                            onPressed: () {
-                              _controller.text = '';
-                            },
-                            icon: const Icon(
-                              Icons.cancel,
-                              color: Color(0xFFC8C8C8),
-                              size: 20,
-                            ))
-                        : null,
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: "Please enter!")),
-          ]),
+          alignment: Alignment.bottomCenter,
+          height: 42,
+          child: TextField(
+              autofocus: true,
+              controller: _controller,
+              textAlignVertical: TextAlignVertical.bottom,
+              onSubmitted: (value) {
+                if (value.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please enter content !')));
+                  return;
+                }
+                _getData(value);
+              },
+              onChanged: (value) {
+                setState(() {
+                  _isShowDelete = value.isNotEmpty && value != '';
+                });
+              },
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                  suffixIcon: _isShowDelete
+                      ? IconButton(
+                          onPressed: () {
+                            _controller.text = '';
+                          },
+                          icon: const Icon(
+                            Icons.cancel,
+                            color: Color(0xFFC8C8C8),
+                            size: 20,
+                          ))
+                      : null,
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: "Please enter!")),
         ),
       ),
       body: isLoading
