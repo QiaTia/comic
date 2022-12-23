@@ -196,6 +196,7 @@ class __PhotoListWidget extends State<_PhotoList> {
         // padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _list.length,
         controller: _controller,
+        cacheExtent: 5,
         itemBuilder: (context, index) {
           //如果到了表尾
           if (_list[index].title == loadingTag) {

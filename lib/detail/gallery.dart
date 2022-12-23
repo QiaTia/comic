@@ -50,6 +50,7 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
               backgroundDecoration: null,
               pageController: widget.pageController,
               enableRotation: true,
+              wantKeepAlive: true,
               onPageChanged: (index) {
                 setState(() {
                   currentIndex = index;
