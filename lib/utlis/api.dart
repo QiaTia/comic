@@ -132,7 +132,7 @@ class ChapterProp {
 class ChapterItemProp {
   final String title;
   final String id;
-  final String image;
+  late String image;
   ChapterItemProp({required this.title, required this.id, required this.image});
 
   // fromJson(Map<String, dynamic> json, this.title, this.id, this.image)

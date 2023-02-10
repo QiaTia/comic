@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../utlis/api.dart';
+import '../utlis/request.dart';
 import '../utlis/storage.dart';
 
 class GridPhotoList extends StatefulWidget {
@@ -49,6 +50,7 @@ class _GridPhotoItem extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: CachedNetworkImage(
         imageUrl: item.image,
+        httpHeaders: imageHeader,
         fit: BoxFit.cover,
         progressIndicatorBuilder: (context, url, downloadProgress) =>
             CircularProgressIndicator(value: downloadProgress.progress),

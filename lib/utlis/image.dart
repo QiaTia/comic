@@ -16,6 +16,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 /// 保存文件或图片到本地
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 
+import 'request.dart';
+
 class ImageUtil {
   /// 保存图片到相册
   static Future<bool> saveImage(String imageUrl) async {
@@ -35,8 +37,10 @@ class ImageUtil {
       Uint8List imageBytes;
 
       /// 保存网络图片
-      CachedNetworkImage image = CachedNetworkImage(imageUrl: imageUrl);
-      print(image);
+      CachedNetworkImage image = CachedNetworkImage(
+        imageUrl: imageUrl,
+        httpHeaders: imageHeader,
+      );
       BaseCacheManager manager = image.cacheManager ?? DefaultCacheManager();
       Map<String, String> headers = image.httpHeaders ?? {};
       File file = await manager.getSingleFile(

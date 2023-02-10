@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../Widget/route_animation.dart';
 import '../utlis/api.dart';
+import '../utlis/request.dart';
 import './gallery.dart';
 import 'package:flutter/services.dart';
 // Obtain shared preferences.
@@ -264,6 +265,7 @@ class _ListPhotoItem extends StatelessWidget {
             child: Center(
               child: CachedNetworkImage(
                 imageUrl: item.url,
+                httpHeaders: imageHeader,
                 fit: BoxFit.fitWidth,
                 progressIndicatorBuilder: (context, url, downloadProgress) =>
                     CircularProgressIndicator(value: downloadProgress.progress),

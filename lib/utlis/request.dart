@@ -1,8 +1,13 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-const API_HOST = 'https://xn--qexm24f3mc.com';
-// const API_HOST = 'https://xn--9ek-mxgmxgcom-yp8ve33bkpevz1kpxq.mxgmxgcom.com/';
+const _api_host = 'https://xn--ej1-mxgmxgcom-yp8ve33bkpevz1kpxq.mxgmxgcom.com/';
+
+final Map<String, String> imageHeader = {
+  'referer': _api_host,
+  'user-agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36 Edg/109.0.1518.78',
+};
 
 class RequestOptions {
   final Map<String, String> params;
@@ -21,9 +26,9 @@ class _HttpService {
     return false;
   }
 
-  completionUri(String url) {
-    if (false == _isExternalUrl(url)) url = API_HOST + url;
-    return url;
+  String completionUri(String url) {
+    if (false == _isExternalUrl(url)) url = _api_host + url;
+    return url.replaceFirst('http://', 'https://');
   }
 
   Uri _parseUrl(String url, RequestOptions? options) {
