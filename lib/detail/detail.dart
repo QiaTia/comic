@@ -31,7 +31,6 @@ class _Photo {
 class _ComicDetail extends State<ComicDetail> {
   final List<_Photo> _photos = [];
   String title = "";
-  bool isLoading = true;
   bool isAppBar = true;
   final ScrollController _controller = ScrollController();
 
@@ -44,7 +43,6 @@ class _ComicDetail extends State<ComicDetail> {
   void setTitle(String val) {
     setState(() {
       title = val;
-      isLoading = false;
     });
   }
 
@@ -104,7 +102,7 @@ class _ComicDetail extends State<ComicDetail> {
                 title: Text(title),
               )
             : null,
-        body: isLoading
+        body: _photos.isEmpty
             ? Center(
                 child: Column(children: const [
                   Padding(padding: EdgeInsets.all(80)),
