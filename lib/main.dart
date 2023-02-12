@@ -4,6 +4,7 @@ import 'detail/chapter.dart';
 import 'detail/search.dart';
 import 'detail/history.dart';
 import './Widget/route_animation.dart';
+import 'utlis/api.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,26 +21,17 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       routes: {
         "/": (context) => const MyHomePage(title: 'R18 Comic'),
-        "/chapter": (context, {arguments}) => ComicChapter(
-            id: int.parse(
-                ModalRoute.of(context)!.settings.arguments.toString())),
+        "/chapter": (context) =>
+            ComicChapter(id: ModalRoute.of(context)!.settings.arguments as int),
         "/detail": (context) {
-          return ComicDetail(
-              id: ModalRoute.of(context)!.settings.arguments.toString());
+          var routeArguments =
+              ModalRoute.of(context)!.settings.arguments as ChapterItemProp;
+          return ComicDetail(options: routeArguments);
         }
       },
       theme: ThemeData(
-          // This is the theme of your application.
-          //
-          // Try running your application with "flutter run". You'll see the
-          // application has a blue toolbar. Then, without quitting the app, try
-          // changing the primarySwatch below to Colors.green and then invoke
-          // "hot reload" (press "r" in the console where you ran "flutter run",
-          // or simply save your changes to "hot reload" in a Flutter IDE).
-          // Notice that the counter didn't reset back to zero; the application
-          // is not restarted.
-          primaryColor: Colors.amber,
-          primarySwatch: Colors.amber,
+          useMaterial3: true,
+          colorSchemeSeed: Colors.amber,
           brightness: brightness),
     );
   }
@@ -67,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   DateTime? _lastPressedAt;
-  List tabs = ["CosPlay", "日漫", "韩漫"];
+  final List tabs = ["CosPlay", "日漫", "韩漫"];
   @override
   void initState() {
     super.initState();
@@ -99,6 +91,8 @@ class _MyHomePageState extends State<MyHomePage>
               ],
               bottom: TabBar(
                 controller: _tabController,
+                indicatorColor: Colors.amber,
+                labelColor: Colors.black87,
                 tabs: tabs.map((e) => Tab(text: e)).toList(),
               ),
             ),

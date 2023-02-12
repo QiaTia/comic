@@ -1,3 +1,4 @@
+import 'package:comic/utlis/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../Widget/route_animation.dart';
@@ -8,10 +9,11 @@ import 'package:flutter/services.dart';
 // Obtain shared preferences.
 
 class ComicDetail extends StatefulWidget {
-  const ComicDetail({super.key, this.page = 1, required this.id});
-
-  final String id;
+  const ComicDetail(
+      {super.key, this.page = 1, required this.options, this.list});
+  final ChapterItemProp options;
   final int page;
+  final List<String>? list;
   @override
   State<ComicDetail> createState() => _ComicDetail();
 }
@@ -31,6 +33,7 @@ class _ComicDetail extends State<ComicDetail> {
   String title = "";
   bool isLoading = true;
   bool isAppBar = true;
+  final ScrollController _controller = ScrollController();
 
   void addItem(String url) {
     setState(() {
@@ -57,16 +60,31 @@ class _ComicDetail extends State<ComicDetail> {
         overlays: visible ? [SystemUiOverlay.top, SystemUiOverlay.bottom] : []);
   }
 
+  void jump([bool? isNext]) {
+    var screenHight = MediaQuery.of(context).size.height * 0.8;
+    var target = isNext != null && isNext ? screenHight : -screenHight;
+    _controller.animateTo(_controller.offset + target,
+        duration: const Duration(milliseconds: 300), curve: Curves.linear);
+  }
+
   @override
   void initState() {
     super.initState();
-    apiServer.getDetail(widget.id, widget.page).then((result) {
-      setTitle(result.title!);
-      for (var element in result.data) {
+    if (widget.list != null) {
+      for (var element in widget.list!) {
         addItem(element);
       }
-      setAppBar();
-    });
+    } else {
+      apiServer.getDetail(widget.options.id, widget.page).then((result) {
+        for (var element in result.data) {
+          addItem(element);
+        }
+        historyStorage.save(widget.options.id, result.title!,
+            widget.options.image, result.data);
+      });
+    }
+    setTitle(widget.options.title);
+    setAppBar();
   }
 
   @override
@@ -77,6 +95,9 @@ class _ComicDetail extends State<ComicDetail> {
 
   @override
   Widget build(BuildContext context) {
+    var screenSize = MediaQuery.of(context).size;
+    var controlleWidth = screenSize.width * 0.4,
+        controllerBottom = (screenSize.height / 3) * 2;
     return Scaffold(
         appBar: isAppBar
             ? AppBar(
@@ -92,72 +113,46 @@ class _ComicDetail extends State<ComicDetail> {
                   Text("数据加载中!")
                 ]),
               )
-            : Stack(children: [
-                // AbsorbPointer
+            : Stack(clipBehavior: Clip.none, children: [
                 Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: GestureDetector(
-                    onTapDown: (detail) {},
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
                     child: SizedBox(
-                        width: MediaQuery.of(context).size.width * 0.4,
-                        height: MediaQuery.of(context).size.height / 3,
-                        child: Container(
-                            color: isAppBar
-                                ? Colors.black45
-                                : const Color.fromARGB(0, 255, 255, 255),
-                            child: Center(
-                              child: Text('Next',
-                                  style: TextStyle(
-                                      color: isAppBar
-                                          ? Colors.white
-                                          : const Color.fromARGB(
-                                              0, 255, 255, 255),
-                                      fontSize: 28),
-                                  textAlign: TextAlign.center),
-                            ))),
-                  ),
-                ),
-                Positioned(
-                  left: 0,
-                  bottom: 0,
-                  child: InkWell(
-                    onTap: () {
-                      print('Last!');
-                    },
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.4,
-                      height: MediaQuery.of(context).size.height / 3,
-                      child: isAppBar
-                          ? Container(
-                              color: Colors.black45,
-                              child: const Center(
-                                child: Text('Last',
-                                    style: TextStyle(
-                                        color: Colors.white, fontSize: 28),
-                                    textAlign: TextAlign.center),
-                              ))
-                          : null,
-                    ),
-                  ),
-                ),
-
-                Positioned(
-                    child: Column(
-                  children: [
-                    Expanded(
-                        flex: 1,
-                        child: _PhotoList(list: _photos, onTap: setAppBar))
-                  ],
-                )),
+                        width: screenSize.width,
+                        height: screenSize.height,
+                        child: _PhotoList(
+                            list: _photos,
+                            controller: _controller,
+                            onTapDown: ((detail) {
+                              var dy = detail.globalPosition.dy,
+                                  dx = detail.globalPosition.dx;
+                              if (dx < controlleWidth &&
+                                  dy > controllerBottom) {
+                                jump();
+                              } else if (dx > screenSize.width * 0.6 &&
+                                  dy > controllerBottom) {
+                                jump(true);
+                              } else {
+                                setAppBar();
+                              }
+                            })))),
+                _ButtonMask(
+                    show: isAppBar,
+                    string: 'Next',
+                    position: PositionType.rightBottom),
+                _ButtonMask(
+                    show: isAppBar,
+                    string: 'Last',
+                    position: PositionType.leftBottom)
               ]));
   }
 }
 
 class _PhotoList extends StatefulWidget {
-  _PhotoList({required this.list, this.onTap});
-  final _ListPhotoItemTap? onTap;
-
+  _PhotoList({required this.list, this.onTapDown, this.controller});
+  final _ListPhotoItemonTapDown? onTapDown;
+  final ScrollController? controller;
   List<_Photo> list;
   @override
   State<StatefulWidget> createState() => __PhotoListWidget();
@@ -166,7 +161,6 @@ class _PhotoList extends StatefulWidget {
 class __PhotoListWidget extends State<_PhotoList> {
   static const loadingTag = "##loading##"; //表尾标记
   final _list = <_Photo>[_Photo(title: loadingTag, url: '')];
-  final ScrollController _controller = ScrollController();
   void _retrieveData() {
     Future.delayed(const Duration(milliseconds: 100)).then((e) {
       setState(() {
@@ -196,7 +190,7 @@ class __PhotoListWidget extends State<_PhotoList> {
         physics: const ClampingScrollPhysics(), //去掉弹性,
         // padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _list.length,
-        controller: _controller,
+        controller: widget.controller,
         cacheExtent: 5,
         itemBuilder: (context, index) {
           //如果到了表尾
@@ -229,9 +223,7 @@ class __PhotoListWidget extends State<_PhotoList> {
           }
           return _ListPhotoItem(
             item: _list[index],
-            onTap: () {
-              widget.onTap!();
-            },
+            onTapDown: widget.onTapDown,
             onLongPress: () {
               // Todo 点击查看大图
               Navigator.of(context).push(FadeRoute(
@@ -246,19 +238,24 @@ class __PhotoListWidget extends State<_PhotoList> {
 }
 
 typedef _ListPhotoItemTap = void Function();
+typedef _ListPhotoItemonTapDown = void Function(TapDownDetails detail);
 
 class _ListPhotoItem extends StatelessWidget {
   const _ListPhotoItem(
-      {Key? key, required this.item, this.onTap, this.onLongPress})
+      {Key? key, required this.item, this.onTapDown, this.onLongPress})
       : super(key: key);
   final _Photo item;
-  final _ListPhotoItemTap? onTap;
   final _ListPhotoItemTap? onLongPress;
+  final _ListPhotoItemonTapDown? onTapDown;
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
       return InkWell(
+        onLongPress: () {
+          if (onLongPress != null) onLongPress!();
+        },
+        onTapDown: onTapDown,
         child: Container(
             width: constraints.maxWidth,
             constraints: const BoxConstraints(minHeight: 150),
@@ -272,18 +269,68 @@ class _ListPhotoItem extends StatelessWidget {
                 errorWidget: (context, url, error) => const Icon(Icons.error),
               ),
             )),
-        // Image.network(
-        //   item.url,
-        //   width: constraints.maxWidth,
-        //   fit: BoxFit.fitWidth,
-        // ),
-        onLongPress: () {
-          onLongPress!();
-        },
-        onTap: () {
-          onTap!();
-        },
       );
     });
+  }
+}
+
+enum PositionType { rightBottom, leftBottom, leftTop, rightTop }
+
+class _ButtonMask extends StatelessWidget {
+  _ButtonMask(
+      {required this.show,
+      required this.string,
+      this.position = PositionType.rightBottom});
+  final bool show;
+  String string;
+  PositionType position;
+  @override
+  Widget build(BuildContext context) {
+    dynamic left = null, bottom = null, right = null, top = null;
+    switch (position) {
+      case PositionType.leftBottom:
+        {
+          left = 0.0;
+          bottom = 0.0;
+          break;
+        }
+      case PositionType.rightBottom:
+        {
+          right = 0.0;
+          bottom = 0.0;
+          break;
+        }
+      case PositionType.leftTop:
+        {
+          top = 0.0;
+          left = 0.0;
+          break;
+        }
+      case PositionType.rightTop:
+        {
+          top = 0.0;
+          right = 0.0;
+          break;
+        }
+    }
+    return Positioned(
+      left: left,
+      bottom: bottom,
+      right: right,
+      top: top,
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.4,
+        height: MediaQuery.of(context).size.height / 3,
+        child: show
+            ? Container(
+                color: Colors.black45,
+                child: Center(
+                  child: Text(string,
+                      style: const TextStyle(color: Colors.white, fontSize: 28),
+                      textAlign: TextAlign.center),
+                ))
+            : null,
+      ),
+    );
   }
 }

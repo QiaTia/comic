@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../utlis/storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'detail.dart';
+import '../utlis/api.dart';
 
 class ComicHistory extends StatefulWidget {
   const ComicHistory({super.key});
@@ -21,6 +23,16 @@ class _ComicHistory extends State<ComicHistory> {
     });
   }
 
+  void onDetail(HistorytItem item, BuildContext content) {
+    Navigator.of(context).push(MaterialPageRoute(
+        builder: (content) => ComicDetail(
+              list: item.list,
+              options: ChapterItemProp(
+                  id: item.id, title: item.title, image: item.image),
+            )));
+    // Navigator.pushNamed(context, '/detail', arguments: item);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,18 +46,16 @@ class _ComicHistory extends State<ComicHistory> {
                   builder: (context) => AlertDialog(
                     title: const Text('确认清除所有记录？'),
                     actions: [
-                      ElevatedButton(
+                      TextButton(
                         onPressed: () async {
+                          var navitator = Navigator.of(context);
                           await historyStorage.clear();
                           setState(() {
                             list = [];
                           });
-                          Navigator.of(context).pop();
+                          navitator.pop();
                         },
                         child: const Text('删除'),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
                       ),
                       TextButton(
                         onPressed: () {
@@ -73,12 +83,7 @@ class _ComicHistory extends State<ComicHistory> {
                           style: TextStyle(color: Colors.grey)),
                     )
                   : ListTile(
-                      onTap: () {
-                        var item = list[index];
-                        historyStorage.save(item.id, item.title, item.image);
-                        Navigator.pushNamed(context, '/detail',
-                            arguments: item.id);
-                      },
+                      onTap: () => onDetail(list[index], context),
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       title: Text(list[index].title),
                       subtitle: Text(list[index].creatAt),

@@ -2,7 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../utlis/api.dart';
 import '../utlis/request.dart';
-import '../utlis/storage.dart';
 
 class GridPhotoList extends StatefulWidget {
   const GridPhotoList({Key? key, required this.list}) : super(key: key);
@@ -60,8 +59,7 @@ class _GridPhotoItem extends StatelessWidget {
 
     return InkWell(
         onTap: () {
-          historyStorage.save(item.id, item.title, item.image);
-          Navigator.pushNamed(context, '/detail', arguments: item.id);
+          Navigator.pushNamed(context, '/detail', arguments: item);
         },
         child: GridTile(
           footer: Material(

@@ -6,16 +6,24 @@ class HistorytItem {
   final String id;
   final String title;
   final String image;
+  final List<String> list;
   final String creatAt;
-
   HistorytItem(Map<String, dynamic> json)
       : title = json['title'],
         id = json['id'],
         creatAt = json['creat_at'],
+        list = (json['list'] as List<dynamic>? ?? [])
+            .map((e) => e.toString())
+            .toList(),
         image = json['image'];
 
-  Map<String, dynamic> toJson() =>
-      {'title': title, 'id': id, 'image': image, 'creat_at': creatAt};
+  Map<String, dynamic> toJson() => {
+        'title': title,
+        'id': id,
+        'image': image,
+        'creat_at': creatAt,
+        'list': list
+      };
 }
 
 class Storage {
@@ -25,6 +33,8 @@ class Storage {
     _storageKey = key;
     SharedPreferences.getInstance().then((value) => {prefs = value});
   }
+
+  /// 初始化实列
   Future<SharedPreferences> _initInstance() async {
     prefs ??= await SharedPreferences.getInstance();
     return prefs!;
@@ -34,13 +44,16 @@ class Storage {
     return (await _initInstance()).getStringList(_storageKey) ?? [];
   }
 
-  Future<void> save(String id, String title, String image) async {
+  /// 保存项目到历史记录
+  Future<void> save(
+      String id, String title, String image, List<String> images) async {
     var list = await getList();
     var fIndex = list.indexWhere((element) => element.id == id);
     var newItem = HistorytItem({
       'id': id,
       'title': title,
       'image': image,
+      'list': images,
       'creat_at': _getCurretnDate()
     });
     if (fIndex == -1) {
@@ -52,11 +65,13 @@ class Storage {
         .setStringList(_storageKey, list.map((e) => jsonEncode(e)).toList());
   }
 
+  /// 获取序列化列表
   Future<List<HistorytItem>> getList() async {
     var list = await _getList();
     return list.map((e) => HistorytItem(json.decode(e))).toList();
   }
 
+  ///清除本地存储
   Future<void> clear() async {
     (await _initInstance()).remove(_storageKey);
   }
