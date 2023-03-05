@@ -284,7 +284,7 @@ class _ButtonMask extends StatelessWidget {
   PositionType position;
   @override
   Widget build(BuildContext context) {
-    dynamic left = null, bottom = null, right = null, top = null;
+    dynamic left, bottom, right, top;
     switch (position) {
       case PositionType.leftBottom:
         {
