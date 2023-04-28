@@ -55,7 +55,8 @@ class _ComicHistory extends State<ComicHistory> {
                           });
                           navitator.pop();
                         },
-                        child: const Text('删除'),
+                        child: const Text('删除',
+                            style: TextStyle(color: Colors.grey)),
                       ),
                       TextButton(
                         onPressed: () {
