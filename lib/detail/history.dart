@@ -27,6 +27,7 @@ class _ComicHistory extends State<ComicHistory> {
     Navigator.of(context).push(MaterialPageRoute(
         builder: (content) => ComicDetail(
               list: item.list,
+              initIndex: item.index ?? 0,
               options: ChapterItemProp(
                   id: item.id, title: item.title, image: item.image),
             )));
@@ -87,7 +88,15 @@ class _ComicHistory extends State<ComicHistory> {
                       onTap: () => onDetail(list[index], context),
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       title: Text(list[index].title),
-                      subtitle: Text(list[index].creatAt),
+                      subtitle: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(list[index].creatAt),
+                          Text(
+                              "${list[index].index}/${list[index].list.length}",
+                              style: const TextStyle(color: Colors.grey))
+                        ],
+                      ),
                       leading: CachedNetworkImage(
                         imageUrl: list[index].image,
                         fit: BoxFit.cover,

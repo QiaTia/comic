@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:comic/utlis/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -6,13 +9,20 @@ import '../utlis/api.dart';
 import '../utlis/request.dart';
 import './gallery.dart';
 import 'package:flutter/services.dart';
+import 'package:event/event.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 // Obtain shared preferences.
 
 class ComicDetail extends StatefulWidget {
   const ComicDetail(
-      {super.key, this.page = 1, required this.options, this.list});
+      {super.key,
+      this.page = 1,
+      this.initIndex = 0,
+      required this.options,
+      this.list});
   final ChapterItemProp options;
   final int page;
+  final int initIndex;
   final List<String>? list;
   @override
   State<ComicDetail> createState() => _ComicDetail();
@@ -32,7 +42,16 @@ class _ComicDetail extends State<ComicDetail> {
   final List<_Photo> _photos = [];
   String title = "";
   bool isAppBar = true;
-  final ScrollController _controller = ScrollController();
+  int currentPage = 0;
+  final ScrollOffsetController _controller = ScrollOffsetController();
+  final ItemScrollController itemScrollController = ItemScrollController();
+
+  /// 更新当前页数
+  void setCurrentIndex(int page) {
+    setState(() {
+      currentPage = page;
+    });
+  }
 
   void addItem(String url) {
     setState(() {
@@ -54,31 +73,44 @@ class _ComicDetail extends State<ComicDetail> {
   }
 
   void systemUiMode([bool visible = false]) {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge,
         overlays: visible ? [SystemUiOverlay.top, SystemUiOverlay.bottom] : []);
   }
 
   void jump([bool? isNext]) {
     var screenHight = MediaQuery.of(context).size.height * 0.8;
     var target = isNext != null && isNext ? screenHight : -screenHight;
-    _controller.animateTo(_controller.offset + target,
-        duration: const Duration(milliseconds: 300), curve: Curves.linear);
+    _controller.animateScroll(
+        offset: target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.linear);
   }
 
   @override
   void initState() {
     super.initState();
+    // if (currentVolumeKeyControl()) addVolumeListen();
+
     if (widget.list != null) {
       for (var element in widget.list!) {
         addItem(element);
       }
+      Future.delayed(const Duration(milliseconds: 800), () {
+        //延时执行的代码
+        print("3秒后执行");
+        itemScrollController.jumpTo(index: widget.initIndex);
+      });
     } else {
       apiServer.getDetail(widget.options.id, widget.page).then((result) {
         for (var element in result.data) {
           addItem(element);
         }
-        historyStorage.save(widget.options.id, result.title!,
-            widget.options.image, result.data);
+        historyStorage.save(
+            id: widget.options.id,
+            title: result.title!,
+            image: widget.options.image,
+            images: result.data,
+            index: widget.initIndex);
       });
     }
     setTitle(widget.options.title);
@@ -87,8 +119,9 @@ class _ComicDetail extends State<ComicDetail> {
 
   @override
   void dispose() {
-    super.dispose();
+    // delVolumeListen();
     systemUiMode(true);
+    super.dispose();
   }
 
   @override
@@ -96,10 +129,39 @@ class _ComicDetail extends State<ComicDetail> {
     var screenSize = MediaQuery.of(context).size;
     var controlleWidth = screenSize.width * 0.4,
         controllerBottom = (screenSize.height / 3) * 2;
-    return Scaffold(
+    return readerKeyboardHolder(Scaffold(
         appBar: isAppBar
             ? AppBar(
                 title: Text(title),
+                actions: [
+                  SizedBox(
+                    width: 98,
+                    child: TextField(
+                      textAlignVertical: TextAlignVertical.center,
+                      textAlign: TextAlign.center,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                            RegExp(r'[0-9]')) //设置只允许输入数字
+                      ],
+                      textInputAction: TextInputAction.go,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        hintText: '$currentPage / ${_photos.length}',
+                      ),
+                      onSubmitted: (value) {
+                        if (value.isEmpty) return;
+                        var targetPage = int.parse(value);
+                        if (targetPage > _photos.length) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('只有${_photos.length}页!')));
+                          return;
+                        }
+                        itemScrollController.jumpTo(index: targetPage);
+                        // widget.onChange!(targetPage);
+                      },
+                    ),
+                  ),
+                ],
               )
             : null,
         body: _photos.isEmpty
@@ -121,7 +183,11 @@ class _ComicDetail extends State<ComicDetail> {
                         height: screenSize.height,
                         child: _PhotoList(
                             list: _photos,
+                            id: widget.options.id,
+                            initIndex: widget.initIndex,
                             controller: _controller,
+                            setCurrentIndex: setCurrentIndex,
+                            itemScrollController: itemScrollController,
                             onTapDown: ((detail) {
                               var dy = detail.globalPosition.dy,
                                   dx = detail.globalPosition.dx;
@@ -138,19 +204,38 @@ class _ComicDetail extends State<ComicDetail> {
                 _ButtonMask(
                     show: isAppBar,
                     string: 'Next',
+                    onTapDown: () {
+                      setAppBar();
+                      jump();
+                    },
                     position: PositionType.rightBottom),
                 _ButtonMask(
                     show: isAppBar,
                     string: 'Last',
+                    onTapDown: () {
+                      setAppBar();
+                      jump(true);
+                    },
                     position: PositionType.leftBottom)
-              ]));
+              ])));
   }
 }
 
 class _PhotoList extends StatefulWidget {
-  _PhotoList({required this.list, this.onTapDown, this.controller});
+  _PhotoList(
+      {required this.list,
+      this.controller,
+      this.initIndex = 0,
+      required this.id,
+      this.setCurrentIndex,
+      this.itemScrollController,
+      this.onTapDown});
   final _ListPhotoItemonTapDown? onTapDown;
-  final ScrollController? controller;
+  final ScrollOffsetController? controller;
+  final ItemScrollController? itemScrollController;
+  void Function(int page)? setCurrentIndex;
+  final String id;
+  final int initIndex;
   List<_Photo> list;
   @override
   State<StatefulWidget> createState() => __PhotoListWidget();
@@ -159,6 +244,10 @@ class _PhotoList extends StatefulWidget {
 class __PhotoListWidget extends State<_PhotoList> {
   static const loadingTag = "##loading##"; //表尾标记
   final _list = <_Photo>[_Photo(title: loadingTag, url: '')];
+  final ItemPositionsListener itemPositionsListener =
+      ItemPositionsListener.create();
+  final ScrollOffsetListener scrollOffsetListener =
+      ScrollOffsetListener.create();
   void _retrieveData() {
     Future.delayed(const Duration(milliseconds: 100)).then((e) {
       setState(() {
@@ -180,16 +269,48 @@ class __PhotoListWidget extends State<_PhotoList> {
   void initState() {
     super.initState();
     _retrieveData();
+    itemPositionsListener.itemPositions.addListener(_onListCurrentChange);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.initIndex > 0) {
+      // sleep(const Duration(seconds: 1));
+      // widget.itemScrollController?.jumpTo(index: 1);
+    }
+  }
+
+  @override
+  void dispose() {
+    itemPositionsListener.itemPositions.removeListener(_onListCurrentChange);
+    super.dispose();
+  }
+
+  void _onListCurrentChange() {
+    var to = itemPositionsListener.itemPositions.value.first.index;
+    // historyStorage.saveIndex(id: widget.id, index: to);
+    // 包含一个下一章, 假设5张图片 0,1,2,3,4 length=5, 下一章=5
+    if (to >= 0 && to < widget.list.length) {
+      widget.setCurrentIndex!(to);
+      historyStorage.saveIndex(id: widget.id, index: to);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    return ScrollablePositionedList.builder(
         physics: const ClampingScrollPhysics(), //去掉弹性,
         // padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _list.length,
-        controller: widget.controller,
-        cacheExtent: 5,
+        initialScrollIndex: widget.initIndex,
+        itemScrollController: widget.itemScrollController,
+        scrollOffsetController: widget.controller,
+        itemPositionsListener: itemPositionsListener,
+        scrollOffsetListener: scrollOffsetListener,
+        // cacheExtent: 1280,
+        minCacheExtent: 1280,
+        // restorationId: widget.rid,
         itemBuilder: (context, index) {
           //如果到了表尾
           if (_list[index].title == loadingTag) {
@@ -222,13 +343,15 @@ class __PhotoListWidget extends State<_PhotoList> {
           return _ListPhotoItem(
             item: _list[index],
             onTapDown: widget.onTapDown,
-            onLongPress: () {
+            onLongPress: () async {
               // Todo 点击查看大图
-              Navigator.of(context).push(FadeRoute(
+              int result = await Navigator.of(context).push(FadeRoute(
                   page: GalleryList(
                 list: widget.list.map((e) => e.url).toList(),
                 index: index,
               )));
+              // 同步查看位置
+              widget.itemScrollController?.jumpTo(index: result);
             },
           );
         });
@@ -278,9 +401,11 @@ class _ButtonMask extends StatelessWidget {
   _ButtonMask(
       {required this.show,
       required this.string,
+      onTapDown,
       this.position = PositionType.rightBottom});
   final bool show;
   String string;
+  void Function()? onTapDown;
   PositionType position;
   @override
   Widget build(BuildContext context) {
@@ -316,19 +441,87 @@ class _ButtonMask extends StatelessWidget {
       bottom: bottom,
       right: right,
       top: top,
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.4,
-        height: MediaQuery.of(context).size.height / 3,
-        child: show
-            ? Container(
-                color: Colors.black45,
-                child: Center(
-                  child: Text(string,
-                      style: const TextStyle(color: Colors.white, fontSize: 28),
-                      textAlign: TextAlign.center),
-                ))
-            : null,
-      ),
+      child: show
+          ? InkWell(
+              onTap: () {
+                if (onTapDown != null) onTapDown!();
+              },
+              child: SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  height: MediaQuery.of(context).size.height / 3,
+                  child: Container(
+                      color: Colors.black45,
+                      child: Center(
+                        child: Text(string,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 28),
+                            textAlign: TextAlign.center),
+                      ))))
+          : const SizedBox(),
     );
   }
+}
+
+////////////////////////////////
+
+// 仅支持安卓
+// 监听后会拦截安卓手机音量键
+// 仅最后一次监听生效
+// event可能为DOWN/UP
+
+var _volumeListenCount = 0;
+
+void _onVolumeEvent(dynamic args) {
+  _readerControllerEvent.broadcast(_ReaderControllerEventArgs("$args"));
+}
+
+EventChannel volumeButtonChannel = const EventChannel("volume_button");
+StreamSubscription? volumeS;
+
+void addVolumeListen() {
+  _volumeListenCount++;
+  if (_volumeListenCount == 1) {
+    volumeS =
+        volumeButtonChannel.receiveBroadcastStream().listen(_onVolumeEvent);
+  }
+}
+
+void delVolumeListen() {
+  _volumeListenCount--;
+  if (_volumeListenCount == 0) {
+    volumeS?.cancel();
+  }
+}
+
+Widget readerKeyboardHolder(Widget widget) {
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    widget = RawKeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKey: (event) {
+        if (event is RawKeyDownEvent) {
+          if (event.isKeyPressed(LogicalKeyboardKey.arrowUp)) {
+            _readerControllerEvent.broadcast(_ReaderControllerEventArgs("UP"));
+          }
+          if (event.isKeyPressed(LogicalKeyboardKey.arrowDown)) {
+            _readerControllerEvent
+                .broadcast(_ReaderControllerEventArgs("DOWN"));
+          }
+        }
+      },
+      child: widget,
+    );
+  }
+  return widget;
+}
+
+////////////////////////////////
+
+Event<_ReaderControllerEventArgs> _readerControllerEvent =
+    Event<_ReaderControllerEventArgs>();
+
+class _ReaderControllerEventArgs extends EventArgs {
+  final String key;
+
+  _ReaderControllerEventArgs(this.key);
 }

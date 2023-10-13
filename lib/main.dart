@@ -63,6 +63,12 @@ class _MyHomePageState extends State<MyHomePage>
   @override
   void initState() {
     super.initState();
+    // httpService
+    //     .get('/content-9d9a75db16285991acd0dbc7146de795-1.html')
+    //     .then((data) {
+    //   print(data['data'] ?? '');
+    // });
+
     _tabController = TabController(length: tabs.length, vsync: this);
   }
 

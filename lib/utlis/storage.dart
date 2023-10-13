@@ -6,12 +6,14 @@ class HistorytItem {
   final String id;
   final String title;
   final String image;
+  final int? index;
   final List<String> list;
   final String creatAt;
   HistorytItem(Map<String, dynamic> json)
       : title = json['title'],
         id = json['id'],
         creatAt = json['creat_at'],
+        index = json['index'] ?? 0,
         list = (json['list'] as List<dynamic>? ?? [])
             .map((e) => e.toString())
             .toList(),
@@ -22,7 +24,8 @@ class HistorytItem {
         'id': id,
         'image': image,
         'creat_at': creatAt,
-        'list': list
+        'list': list,
+        'index': index,
       };
 }
 
@@ -46,7 +49,11 @@ class Storage {
 
   /// 保存项目到历史记录
   Future<void> save(
-      String id, String title, String image, List<String> images) async {
+      {required String id,
+      required String title,
+      required String image,
+      int? index = 0,
+      required List<String> images}) async {
     var list = await getList();
     var fIndex = list.indexWhere((element) => element.id == id);
     var newItem = HistorytItem({
@@ -54,13 +61,15 @@ class Storage {
       'title': title,
       'image': image,
       'list': images,
-      'creat_at': _getCurretnDate()
+      'creat_at': _getCurretnDate(),
+      'index': index,
     });
-    if (fIndex == -1) {
-      list.add(newItem);
-    } else {
-      list[fIndex] = newItem;
+    // 存在提到首位
+    if (fIndex != -1) {
+      list.removeAt(fIndex);
     }
+    list.add(newItem);
+
     await (await _initInstance())
         .setStringList(_storageKey, list.map((e) => jsonEncode(e)).toList());
   }
@@ -69,6 +78,18 @@ class Storage {
   Future<List<HistorytItem>> getList() async {
     var list = await _getList();
     return list.map((e) => HistorytItem(json.decode(e))).toList();
+  }
+
+  /// 保存浏览记录
+  Future<void> saveIndex({required String id, required int index}) async {
+    var item = (await getList()).lastWhere((element) => element.id == id);
+    // print(item.index);
+    save(
+        id: id,
+        title: item.title,
+        image: item.image,
+        images: item.list,
+        index: index);
   }
 
   ///清除本地存储
