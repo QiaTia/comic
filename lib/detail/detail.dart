@@ -248,6 +248,8 @@ class __PhotoListWidget extends State<_PhotoList> {
       ItemPositionsListener.create();
   final ScrollOffsetListener scrollOffsetListener =
       ScrollOffsetListener.create();
+
+  /// 动态拼装列表
   void _retrieveData() {
     Future.delayed(const Duration(milliseconds: 100)).then((e) {
       setState(() {
@@ -257,8 +259,8 @@ class __PhotoListWidget extends State<_PhotoList> {
           start,
           widget.list.sublist(
               start,
-              start + 10 > widget.list.length - 1
-                  ? widget.list.length - 1
+              start + 10 > widget.list.length
+                  ? widget.list.length
                   : start + 10),
         );
       });
@@ -314,7 +316,7 @@ class __PhotoListWidget extends State<_PhotoList> {
         itemBuilder: (context, index) {
           //如果到了表尾
           if (_list[index].title == loadingTag) {
-            //不足100条，继续获取数据
+            //未渲染完成，继续获取数据
             if (_list.length - 1 < widget.list.length - 1) {
               //获取数据
               _retrieveData();

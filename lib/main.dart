@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'detail/detail.dart';
 import 'detail/chapter.dart';
 import 'detail/search.dart';
@@ -58,8 +59,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  DateTime? _lastPressedAt;
-  final List tabs = ["CosPlay", "日漫", "韩漫"];
+  DateTime? currentBackPressTime;
+  final List tabs = ["同人志", "CosPlay", "单行本", "韩漫"];
   @override
   void initState() {
     super.initState();
@@ -74,7 +75,39 @@ class _MyHomePageState extends State<MyHomePage>
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
+    // 返回键退出
+    bool closeOnConfirm() {
+      DateTime now = DateTime.now();
+      // 物理键，两次间隔大于4秒, 退出请求无效
+      if (currentBackPressTime == null ||
+          now.difference(currentBackPressTime!) > const Duration(seconds: 4)) {
+        currentBackPressTime = now;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Center(child: Text('再次按下以关闭应用程序')),
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return false;
+      }
+
+      // 退出请求有效
+      currentBackPressTime = null;
+      return true;
+    }
+
+    return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (didPop) {
+            return;
+          }
+          if (closeOnConfirm()) {
+            // 系统级别导航栈 退出程序
+            SystemNavigator.pop();
+          }
+        },
         child: Scaffold(
             appBar: AppBar(
               title: Text(widget.title),
@@ -110,22 +143,10 @@ class _MyHomePageState extends State<MyHomePage>
                   .keys
                   .map((i) => KeepAliveWrapper(
                           child: ComicChapter(
-                        id: (i + -3).abs(),
+                        id: (i + -4).abs(),
                       )))
                   .toList(),
-            )),
-        onWillPop: () async {
-          if (_lastPressedAt == null ||
-              DateTime.now().difference(_lastPressedAt!) >
-                  const Duration(seconds: 1)) {
-            //两次点击间隔超过1秒则重新计时
-            _lastPressedAt = DateTime.now();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                duration: Duration(seconds: 1), content: Text('再次点击退出!')));
-            return false;
-          }
-          return true;
-        });
+            )));
   }
 
   @override
