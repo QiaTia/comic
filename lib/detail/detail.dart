@@ -97,7 +97,7 @@ class _ComicDetail extends State<ComicDetail> {
       }
       Future.delayed(const Duration(milliseconds: 800), () {
         //延时执行的代码
-        print("3秒后执行");
+        // print("3秒后执行");
         itemScrollController.jumpTo(index: widget.initIndex);
       });
     } else {
@@ -165,8 +165,8 @@ class _ComicDetail extends State<ComicDetail> {
               )
             : null,
         body: _photos.isEmpty
-            ? Center(
-                child: Column(children: const [
+            ? const Center(
+                child: Column(children: [
                   Padding(padding: EdgeInsets.all(80)),
                   CircularProgressIndicator(),
                   Padding(padding: EdgeInsets.all(8)),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:math';
 
 typedef ValueChanged = void Function(int page);
 
@@ -48,7 +49,8 @@ class _Pagination extends State<Pagination> {
                 textInputAction: TextInputAction.go,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  hintText: '${widget.current} / ${widget.total}',
+                  hintText:
+                      '${widget.current} / ${max(widget.total, widget.current)}',
                 ),
                 onSubmitted: (value) {
                   if (value.isEmpty) return;

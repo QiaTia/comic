@@ -1,3 +1,5 @@
+import 'package:comic/detail/about.dart';
+import 'package:comic/detail/setting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'detail/detail.dart';
@@ -16,7 +18,6 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    var brightness = Theme.of(context).brightness;
     return MaterialApp(
       title: 'R18 Comic',
       debugShowCheckedModeBanner: false,
@@ -30,10 +31,8 @@ class MyApp extends StatelessWidget {
           return ComicDetail(options: routeArguments);
         }
       },
-      theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.amber,
-          brightness: brightness),
+      theme: ThemeData(colorSchemeSeed: Colors.amber),
+      darkTheme: ThemeData.dark(),
     );
   }
 }
@@ -111,6 +110,30 @@ class _MyHomePageState extends State<MyHomePage>
         child: Scaffold(
             appBar: AppBar(
               title: Text(widget.title),
+              leading: PopupMenuButton<String>(
+                  onSelected: (val) {
+                    switch (val) {
+                      case 'Setting':
+                        {
+                          Navigator.push(
+                              context, FadeRoute(page: const SettingPage()));
+                          break;
+                        }
+                      case 'About':
+                        {
+                          Navigator.push(
+                              context, FadeRoute(page: const AboutPage()));
+                          break;
+                        }
+                    }
+                    if (val == '') {}
+                  },
+                  itemBuilder: (context) => ['Setting', 'About']
+                      .map((name) => PopupMenuItem(
+                            value: name,
+                            child: Text(name),
+                          ))
+                      .toList()),
               actions: [
                 IconButton(
                     tooltip: 'History',
