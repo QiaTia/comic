@@ -8,8 +8,12 @@ import 'detail/search.dart';
 import 'detail/history.dart';
 import './Widget/route_animation.dart';
 import 'utlis/api.dart';
+import 'package:get/get.dart';
+import './models/setting.dart';
 
-void main() {
+void main() async {
+  Get.put(SetController());
+  await SetController().init();
   runApp(const MyApp());
 }
 
@@ -18,7 +22,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'R18 Comic',
       debugShowCheckedModeBanner: false,
       routes: {

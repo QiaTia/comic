@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../models/setting.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -8,21 +10,49 @@ class SettingPage extends StatefulWidget {
 }
 
 class _Setting extends State<SettingPage> {
+  final SetController set = Get.find();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Setting'),
       ),
-      body: const Column(
+      body: ListView(
         children: [
           LabelRadio(
-            list: ['跟随系统', '亮色', '暗色'],
-            label: '主题样式式',
-            value: 0,
+            list: const ['跟随系统', '亮色', '暗色'],
+            label: '主题样式',
+            onChanged: (index) {
+              switch (index) {
+                case 1:
+                  {
+                    set.setThemeMode(false);
+                    break;
+                  }
+                case 2:
+                  {
+                    set.setThemeMode(true);
+                    break;
+                  }
+                default:
+                  {
+                    set.setThemeMode(Get.isDarkMode);
+                  }
+              }
+            },
+            value: set.isDark.value ? 2 : 1,
           ),
-          Divider(),
+          const Divider(),
           LabelRadio(
+              list: themeList.map((el) => el.toString()).toList(),
+              value: set.themeIndex.value,
+              label: '主题颜色',
+              onChanged: (val) {
+                set.setThemeIndex(val);
+              }),
+          const Divider(),
+          const LabelRadio(
             list: ['跟随系统', '中文', 'English'],
             value: 1,
             label: '语言',
