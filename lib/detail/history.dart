@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../utlis/storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'detail.dart';
@@ -38,14 +39,14 @@ class _ComicHistory extends State<ComicHistory> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('浏览历史'),
+        title: Text('history'.tr),
         actions: [
           IconButton(
               onPressed: () async {
                 await showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('确认清除所有记录？'),
+                    title: Text('deleteTip'.tr),
                     actions: [
                       TextButton(
                         onPressed: () async {
@@ -56,20 +57,20 @@ class _ComicHistory extends State<ComicHistory> {
                           });
                           navitator.pop();
                         },
-                        child: const Text('删除',
-                            style: TextStyle(color: Colors.grey)),
+                        child: Text('deleteTipConfirm'.tr,
+                            style: const TextStyle(color: Colors.grey)),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop();
                         },
-                        child: const Text('算了'),
+                        child: Text('deleteTipCancel'.tr),
                       )
                     ],
                   ),
                 );
               },
-              tooltip: '清除所有记录',
+              tooltip: 'clear'.tr,
               icon: const Icon(Icons.clear_all_outlined))
         ],
       ),
@@ -81,8 +82,8 @@ class _ComicHistory extends State<ComicHistory> {
                   ? Container(
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: const Text('已经没有啦！',
-                          style: TextStyle(color: Colors.grey)),
+                      child: Text('tipRecordEmpty'.tr,
+                          style: const TextStyle(color: Colors.grey)),
                     )
                   : ListTile(
                       onTap: () => onDetail(list[index], context),
@@ -112,7 +113,7 @@ class _ComicHistory extends State<ComicHistory> {
           : Container(
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: const Text('还没有记录哟！'),
+              child: Text('tipEmptyRecord'.tr),
             ),
     );
   }

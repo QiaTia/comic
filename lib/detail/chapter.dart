@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../Widget/grid_photo_list.dart';
 import '../Widget/pagination.dart';
 import '../utlis/api.dart';
@@ -67,11 +68,11 @@ class _ComicChapter extends State<ComicChapter> {
         // ),
         body: isLoading
             ? Center(
-                child: Column(children: const [
-                  Padding(padding: EdgeInsets.all(80)),
-                  CircularProgressIndicator(),
-                  Padding(padding: EdgeInsets.all(8)),
-                  Text("数据加载中!")
+                child: Column(children: [
+                  const Padding(padding: EdgeInsets.all(80)),
+                  const CircularProgressIndicator(),
+                  const Padding(padding: EdgeInsets.all(8)),
+                  Text("loading".tr)
                 ]),
               )
             : Column(

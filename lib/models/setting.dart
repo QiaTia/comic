@@ -20,6 +20,8 @@ const themeList = [
   Colors.indigo,
 ];
 
+const langList = ['中文', 'English', '日本語'];
+
 ///  深色模式存储
 const _themeMode = '_theme_mode';
 
@@ -37,7 +39,7 @@ class SetController extends GetxController {
   var isDark = false.obs;
 
   /// 语言
-  var currentLanguage = 'zh'.obs;
+  var currentLanguage = ''.obs;
 
   /// 设置主题颜色
   setThemeIndex(int i) async {
@@ -58,7 +60,8 @@ class SetController extends GetxController {
 
   /// 从系统读取当前是否深色模式
   readThemeMode(SharedPreferences prefs) {
-    isDark.value = prefs.getBool(_themeMode) ?? Get.isDarkMode;
+    isDark.value = prefs.getBool(_themeMode) ??
+        MediaQuery.of(Get.context!).platformBrightness == Brightness.dark;
     setThemeMode(isDark.value);
   }
 
@@ -71,14 +74,17 @@ class SetController extends GetxController {
   /// 设置语言
   setLanguage(String language) async {
     currentLanguage.value = language;
+    Get.updateLocale(Locale(language));
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     prefs.setString(_currentLanguage, language);
   }
 
   /// 从缓存或系统读取当前语言
   readLanguage(SharedPreferences prefs) {
-    currentLanguage.value = prefs.getString(_currentLanguage) ?? 'zh';
-    setLanguage(currentLanguage.value);
+    var lang = prefs.getString(_currentLanguage) ??
+        Get.deviceLocale?.languageCode ??
+        'zh';
+    setLanguage(lang);
   }
 
   /// 数据初始化
@@ -86,5 +92,7 @@ class SetController extends GetxController {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     readThemeMode(prefs);
     readThemeIndex(prefs);
+    readLanguage(prefs);
+    super.onInit();
   }
 }

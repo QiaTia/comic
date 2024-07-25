@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../Widget/grid_photo_list.dart';
 import '../Widget/pagination.dart';
 import '../Widget/white_data.dart';
@@ -64,12 +65,10 @@ class _SearchPage extends State<StatefulWidget> {
           child: TextField(
               autofocus: true,
               controller: _controller,
-              textAlignVertical: TextAlignVertical.bottom,
               onSubmitted: (value) {
                 if (value.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter content !')));
-                  return;
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(SnackBar(content: Text('enterPlease'.tr)));
                 }
                 _getData(value);
               },
@@ -92,16 +91,16 @@ class _SearchPage extends State<StatefulWidget> {
                           ))
                       : null,
                   prefixIcon: const Icon(Icons.search),
-                  hintText: "Please enter!")),
+                  hintText: 'enterPlease'.tr)),
         ),
       ),
       body: isLoading
           ? Center(
-              child: Column(children: const [
-                Padding(padding: EdgeInsets.all(80)),
-                CircularProgressIndicator(),
-                Padding(padding: EdgeInsets.all(8)),
-                Text("数据加载中!")
+              child: Column(children: [
+                const Padding(padding: EdgeInsets.all(80)),
+                const CircularProgressIndicator(),
+                const Padding(padding: EdgeInsets.all(8)),
+                Text("loading".tr)
               ]),
             )
           : list.length > 1

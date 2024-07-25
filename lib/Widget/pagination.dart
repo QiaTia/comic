@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 
+import 'package:get/get.dart';
+
 typedef ValueChanged = void Function(int page);
 
 class Pagination extends StatefulWidget {
@@ -28,13 +30,13 @@ class _Pagination extends State<Pagination> {
               onPressed: () {
                 if (widget.current <= 1) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text('已经是第一页了!')));
+                      .showSnackBar(SnackBar(content: Text('tipStart'.tr)));
                   return;
                 }
                 /** 上一页 */
                 widget.onChange!(widget.current - 1);
               },
-              child: const Text('上一页'),
+              child: Text('prePage'.tr),
             ),
             const Padding(padding: EdgeInsets.all(8)),
             SizedBox(
@@ -56,8 +58,8 @@ class _Pagination extends State<Pagination> {
                   if (value.isEmpty) return;
                   var targetPage = int.parse(value);
                   if (targetPage > widget.total) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('只有${widget.total}页!')));
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text('tipEmpty'.tr)));
                     return;
                   }
                   widget.onChange!(targetPage);
@@ -70,11 +72,11 @@ class _Pagination extends State<Pagination> {
                   backgroundColor: widget.current == widget.total
                       ? const Color(0xFFF9F9F9)
                       : null),
-              child: const Text("下一页"),
+              child: Text("nextPage".tr),
               onPressed: () {
                 if (widget.current >= widget.total) {
                   ScaffoldMessenger.of(context)
-                      .showSnackBar(const SnackBar(content: Text('已经是最后一页了!')));
+                      .showSnackBar(SnackBar(content: Text('tipEnd'.tr)));
                   return;
                 }
                 /** 下一页 */

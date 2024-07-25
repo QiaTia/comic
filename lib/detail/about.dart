@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
@@ -12,7 +13,7 @@ class _AboutPage extends State<AboutPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Setting'),
+        title: Text('about'.tr),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -21,17 +22,17 @@ class _AboutPage extends State<AboutPage> {
             padding: const EdgeInsets.symmetric(
               vertical: 12,
             ),
-            child: Text('R18 Comic',
-                style: Theme.of(context).textTheme.titleLarge),
+            child:
+                Text('name'.tr, style: Theme.of(context).textTheme.titleLarge),
           ),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Padding(
+              const Padding(
                   padding: EdgeInsets.symmetric(
                 horizontal: 4,
               )),
-              Text('所有内容均来源网络')
+              Text('contentOrigin'.tr)
             ],
           ),
           const Row(

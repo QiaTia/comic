@@ -11,51 +11,105 @@ class SettingPage extends StatefulWidget {
 
 class _Setting extends State<SettingPage> {
   final SetController set = Get.find();
+  var langIndex = 0;
+  @override
+  void initState() {
+    switch (set.currentLanguage.value) {
+      case 'ja':
+        {
+          langIndex = 3;
+          break;
+        }
+      case 'en':
+        {
+          langIndex = 2;
+          break;
+        }
+      case 'zh':
+        {
+          langIndex = 1;
+          break;
+        }
+    }
+    super.initState();
+  }
+
+  /// 设置语言
+  void setLange(int index) {
+    var lang = Get.locale?.languageCode ?? 'zh';
+    switch (index) {
+      case 3:
+        {
+          lang = 'ja';
+          break;
+        }
+      case 2:
+        {
+          lang = 'en';
+          break;
+        }
+      case 1:
+        {
+          lang = 'zh';
+          break;
+        }
+    }
+    set.setLanguage(lang);
+  }
+
+  /// 设置主题样式
+  void setThemeMode(int themeIndex) {
+    switch (themeIndex) {
+      case 1:
+        {
+          set.setThemeMode(false);
+          break;
+        }
+      case 2:
+        {
+          set.setThemeMode(true);
+          break;
+        }
+      default:
+        {
+          set.setThemeMode(
+              MediaQuery.of(context).platformBrightness == Brightness.dark);
+        }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Setting'),
+        title: Text('setting'.tr),
       ),
       body: ListView(
         children: [
           LabelRadio(
-            list: const ['跟随系统', '亮色', '暗色'],
-            label: '主题样式',
+            list: ['follow'.tr, 'light'.tr, 'dark'.tr],
+            label: 'themeMode'.tr,
             onChanged: (index) {
-              switch (index) {
-                case 1:
-                  {
-                    set.setThemeMode(false);
-                    break;
-                  }
-                case 2:
-                  {
-                    set.setThemeMode(true);
-                    break;
-                  }
-                default:
-                  {
-                    set.setThemeMode(Get.isDarkMode);
-                  }
-              }
+              setThemeMode(index);
             },
             value: set.isDark.value ? 2 : 1,
           ),
           const Divider(),
           LabelRadio(
-              list: themeList.map((el) => el.toString()).toList(),
+              list: themeList.map((el) => el.value.toString()).toList(),
               value: set.themeIndex.value,
-              label: '主题颜色',
+              label: 'themeStyle'.tr,
               onChanged: (val) {
                 set.setThemeIndex(val);
               }),
           const Divider(),
-          const LabelRadio(
-            list: ['跟随系统', '中文', 'English'],
-            value: 1,
-            label: '语言',
+          LabelRadio(
+            list: ['follow'.tr, '中文', 'English', '日本語'],
+            value: langIndex,
+            label: 'language'.tr,
+            onChanged: (val) {
+              setLange(val);
+            },
           ),
         ],
       ),

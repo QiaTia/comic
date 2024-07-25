@@ -10,6 +10,7 @@ import './Widget/route_animation.dart';
 import 'utlis/api.dart';
 import 'package:get/get.dart';
 import './models/setting.dart';
+import './i18n/main.dart';
 
 void main() async {
   Get.put(SetController());
@@ -37,6 +38,9 @@ class MyApp extends StatelessWidget {
       },
       theme: ThemeData(colorSchemeSeed: Colors.amber),
       darkTheme: ThemeData.dark(),
+      translations: Messages(), // your translations
+      fallbackLocale: const Locale(
+          'zh'), // specify the fallback locale in case an invalid locale is selected.
     );
   }
 }
@@ -63,7 +67,7 @@ class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   DateTime? currentBackPressTime;
-  final List tabs = ["同人志", "CosPlay", "单行本", "韩漫"];
+  List<String> tabs = ["doujinshi", "CosPlay", "offprint", "korea"];
   @override
   void initState() {
     super.initState();
@@ -117,13 +121,13 @@ class _MyHomePageState extends State<MyHomePage>
               leading: PopupMenuButton<String>(
                   onSelected: (val) {
                     switch (val) {
-                      case 'Setting':
+                      case 'setting':
                         {
                           Navigator.push(
                               context, FadeRoute(page: const SettingPage()));
                           break;
                         }
-                      case 'About':
+                      case 'about':
                         {
                           Navigator.push(
                               context, FadeRoute(page: const AboutPage()));
@@ -132,10 +136,10 @@ class _MyHomePageState extends State<MyHomePage>
                     }
                     if (val == '') {}
                   },
-                  itemBuilder: (context) => ['Setting', 'About']
+                  itemBuilder: (context) => ['setting', 'about']
                       .map((name) => PopupMenuItem(
                             value: name,
-                            child: Text(name),
+                            child: Text(name.tr),
                           ))
                       .toList()),
               actions: [
@@ -159,7 +163,7 @@ class _MyHomePageState extends State<MyHomePage>
                 controller: _tabController,
                 indicatorColor: Colors.amber,
                 labelColor: Colors.black87,
-                tabs: tabs.map((e) => Tab(text: e)).toList(),
+                tabs: tabs.map((e) => Tab(text: e.tr)).toList(),
               ),
             ),
             body: TabBarView(

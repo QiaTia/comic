@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:comic/utlis/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:get/get.dart';
 import '../Widget/route_animation.dart';
 import '../utlis/api.dart';
 import '../utlis/request.dart';
@@ -153,7 +154,7 @@ class _ComicDetail extends State<ComicDetail> {
                         var targetPage = int.parse(value);
                         if (targetPage > _photos.length) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('只有${_photos.length}页!')));
+                              SnackBar(content: Text('tipEmpty!'.tr)));
                           return;
                         }
                         itemScrollController.jumpTo(index: targetPage);
@@ -165,12 +166,12 @@ class _ComicDetail extends State<ComicDetail> {
               )
             : null,
         body: _photos.isEmpty
-            ? const Center(
+            ? Center(
                 child: Column(children: [
-                  Padding(padding: EdgeInsets.all(80)),
-                  CircularProgressIndicator(),
-                  Padding(padding: EdgeInsets.all(8)),
-                  Text("数据加载中!")
+                  const Padding(padding: EdgeInsets.all(80)),
+                  const CircularProgressIndicator(),
+                  const Padding(padding: EdgeInsets.all(8)),
+                  Text("loading".tr)
                 ]),
               )
             : Stack(clipBehavior: Clip.none, children: [
@@ -203,7 +204,7 @@ class _ComicDetail extends State<ComicDetail> {
                             })))),
                 _ButtonMask(
                     show: isAppBar,
-                    string: 'Next',
+                    string: 'nextPage'.tr,
                     onTapDown: () {
                       setAppBar();
                       jump();
@@ -211,7 +212,7 @@ class _ComicDetail extends State<ComicDetail> {
                     position: PositionType.rightBottom),
                 _ButtonMask(
                     show: isAppBar,
-                    string: 'Last',
+                    string: 'prePage'.tr,
                     onTapDown: () {
                       setAppBar();
                       jump(true);
