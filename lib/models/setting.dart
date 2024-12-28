@@ -23,7 +23,7 @@ const themeList = [
 const langList = ['中文', 'English', '日本語'];
 
 ///  深色模式存储
-const _themeMode = '_theme_mode';
+const _themeMode = '__theme_mode';
 
 /// 当前主题颜色存储
 const _themeIndex = '_theme_index';
@@ -36,7 +36,7 @@ class SetController extends GetxController {
   var themeIndex = 0.obs;
 
   /// 是否深色模式
-  var isDark = false.obs;
+  var themeMode = ThemeMode.system.obs;
 
   /// 语言
   var currentLanguage = ''.obs;
@@ -51,18 +51,26 @@ class SetController extends GetxController {
   }
 
   /// 设置是否深色模式
-  setThemeMode(bool dark) async {
-    isDark.value = dark;
-    Get.changeThemeMode(dark ? ThemeMode.dark : ThemeMode.light);
+  setThemeMode(ThemeMode theme) async {
+    themeMode.value = theme;
+    Get.changeThemeMode(theme);
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    prefs.setBool(_themeMode, dark);
+    prefs.setString(_themeMode, theme.toString());
   }
 
   /// 从系统读取当前是否深色模式
   readThemeMode(SharedPreferences prefs) {
-    isDark.value = prefs.getBool(_themeMode) ??
-        MediaQuery.of(Get.context!).platformBrightness == Brightness.dark;
-    setThemeMode(isDark.value);
+    var theme = ThemeMode.system;
+    var local = prefs.getString(_themeMode);
+    if (local != null) {
+      theme = ThemeMode.values.firstWhere((e) => e.toString() == local);
+    } else if (Get.context != null) {
+      theme =
+          (MediaQuery.of(Get.context!).platformBrightness == Brightness.light)
+              ? ThemeMode.light
+              : ThemeMode.dark;
+    }
+    setThemeMode(theme);
   }
 
   /// 从缓存读取当前主题颜色主键
@@ -88,7 +96,8 @@ class SetController extends GetxController {
   }
 
   /// 数据初始化
-  init() async {
+  @override
+  onInit() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     readThemeMode(prefs);
     readThemeIndex(prefs);

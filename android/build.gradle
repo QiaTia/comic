@@ -1,61 +1,16 @@
-buildscript {
-    ext.kotlin_version = '1.6.10'
-    repositories {
-        // google()
-        // mavenCentral()
-        maven { 
-             allowInsecureProtocol = true
-            url 'https://maven.aliyun.com/repository/google'
-        }
-        maven {
-             allowInsecureProtocol = true
-            url 'https://maven.aliyun.com/repository/jcenter'
-        }
-        maven {
-            allowInsecureProtocol = true
-            url 'http://maven.aliyun.com/nexus/content/groups/public'
-        }
-        maven {
-            allowInsecureProtocol = true
-            url 'https://maven.aliyun.com/repository/gradle-plugin'
-        } 
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 allprojects {
     repositories {
-        // google()
-        // mavenCentral()
-        maven { 
-             allowInsecureProtocol = true
-            url 'https://maven.aliyun.com/repository/google'
-        }
-        maven {
-             allowInsecureProtocol = true
-            url 'https://maven.aliyun.com/repository/jcenter'
-        }
-        maven {
-            allowInsecureProtocol = true
-            url 'http://maven.aliyun.com/nexus/content/groups/public'
-        }
-        maven {
-            allowInsecureProtocol = true
-            url 'https://maven.aliyun.com/repository/gradle-plugin'
-        } 
+        google()
+        mavenCentral()
     }
 }
 
-rootProject.buildDir = '../build'
+rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
 }
 subprojects {
-    project.evaluationDependsOn(':app')
+    project.evaluationDependsOn(":app")
 }
 
 tasks.register("clean", Delete) {

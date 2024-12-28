@@ -66,6 +66,7 @@ class _ComicDetail extends State<ComicDetail> {
     });
   }
 
+  /// 是否展示头部标题栏
   void setAppBar() {
     setState(() {
       isAppBar = !isAppBar;
@@ -78,6 +79,7 @@ class _ComicDetail extends State<ComicDetail> {
         overlays: visible ? [SystemUiOverlay.top, SystemUiOverlay.bottom] : []);
   }
 
+  /// 跳转到指定
   void jump([bool? isNext]) {
     var screenHight = MediaQuery.of(context).size.height * 0.8;
     var target = isNext != null && isNext ? screenHight : -screenHight;

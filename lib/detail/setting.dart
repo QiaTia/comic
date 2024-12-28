@@ -11,50 +11,15 @@ class SettingPage extends StatefulWidget {
 
 class _Setting extends State<SettingPage> {
   final SetController set = Get.find();
-  var langIndex = 0;
-  @override
-  void initState() {
-    switch (set.currentLanguage.value) {
-      case 'ja':
-        {
-          langIndex = 3;
-          break;
-        }
-      case 'en':
-        {
-          langIndex = 2;
-          break;
-        }
-      case 'zh':
-        {
-          langIndex = 1;
-          break;
-        }
-    }
-    super.initState();
-  }
 
   /// 设置语言
-  void setLange(int index) {
-    var lang = Get.locale?.languageCode ?? 'zh';
-    switch (index) {
-      case 3:
-        {
-          lang = 'ja';
-          break;
-        }
-      case 2:
-        {
-          lang = 'en';
-          break;
-        }
-      case 1:
-        {
-          lang = 'zh';
-          break;
-        }
+  void setLange(String str) {
+    if (str == '') {
+      var code = Get.deviceLocale?.languageCode;
+      if (code != '') set.setLanguage(code!);
+    } else {
+      set.setLanguage(str);
     }
-    set.setLanguage(lang);
   }
 
   /// 设置主题样式
@@ -62,53 +27,63 @@ class _Setting extends State<SettingPage> {
     switch (themeIndex) {
       case 1:
         {
-          set.setThemeMode(false);
+          set.setThemeMode(ThemeMode.light);
           break;
         }
       case 2:
         {
-          set.setThemeMode(true);
+          set.setThemeMode(ThemeMode.dark);
           break;
         }
       default:
         {
-          set.setThemeMode(
-              MediaQuery.of(context).platformBrightness == Brightness.dark);
+          set.setThemeMode(ThemeMode.system);
         }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    var i = 0;
     return Scaffold(
       appBar: AppBar(
         title: Text('setting'.tr),
       ),
       body: ListView(
         children: [
-          LabelRadio(
-            list: ['follow'.tr, 'light'.tr, 'dark'.tr],
+          LabelRadio<ThemeMode>(
+            list: [
+              ('follow'.tr, ThemeMode.system),
+              ('light'.tr, ThemeMode.light),
+              ('dark'.tr, ThemeMode.dark)
+            ],
             label: 'themeMode'.tr,
-            onChanged: (index) {
-              setThemeMode(index);
+            value: set.themeMode.value,
+            onChanged: (p0) {
+              set.setThemeMode(p0 as ThemeMode);
             },
-            value: set.isDark.value ? 2 : 1,
+            // value: set.themeMode.value,
           ),
           const Divider(),
-          LabelRadio(
-              list: themeList.map((el) => el.value.toString()).toList(),
+          LabelRadio<int>(
+              list: themeList.map((el) => (el.value.toString(), i++)).toList(),
               value: set.themeIndex.value,
               label: 'themeStyle'.tr,
               onChanged: (val) {
-                set.setThemeIndex(val);
+                set.setThemeIndex(val as int);
               }),
           const Divider(),
-          LabelRadio(
-            list: ['follow'.tr, '中文', 'English', '日本語'],
-            value: langIndex,
+          LabelRadio<String>(
+            list: [
+              ('follow'.tr, ''),
+              ('中文', 'zh'),
+              ('English', 'en'),
+              ('日本語', 'ja')
+            ],
+            value: set.currentLanguage.value,
             label: 'language'.tr,
             onChanged: (val) {
-              setLange(val);
+              setLange(val as String);
             },
           ),
         ],
@@ -118,35 +93,35 @@ class _Setting extends State<SettingPage> {
 }
 
 /// 单选框
-class LabelRadio extends StatefulWidget {
+class LabelRadio<T> extends StatefulWidget {
   /// 默认选择项目
-  final int value;
+  final T value;
 
   /// 选项列表
-  final List<String> list;
+  final List<(String, T)> list;
 
   /// 选中回调
-  final void Function(int)? onChanged;
+  final void Function(dynamic)? onChanged;
 
   /// 描述说明
   final String label;
 
   const LabelRadio(
       {super.key,
-      this.value = 0,
+      required this.value,
       required this.list,
       this.onChanged,
       required this.label});
   @override
-  State<LabelRadio> createState() => _LabelRadio();
+  State<LabelRadio> createState() => _LabelRadio<T>();
 }
 
-class _LabelRadio extends State<LabelRadio> {
-  late String _value;
+class _LabelRadio<T> extends State<LabelRadio> {
+  late T _value;
   @override
   void initState() {
+    _value = widget.value;
     super.initState();
-    _value = widget.list[widget.value]; // 将初始化移到 initState 中
   }
 
   @override
@@ -167,15 +142,16 @@ class _LabelRadio extends State<LabelRadio> {
     ];
     children.addAll(widget.list
         .map(
-          (title) => RadioListTile<String>(
-            title: Text(title),
-            value: title,
+          (item) => RadioListTile<T>(
+            title: Text(item.$1),
+            value: item.$2,
             groupValue: _value,
             onChanged: (value) {
               setState(() {
-                _value = value!;
+                _value = item.$2;
               });
-              widget.onChanged?.call(widget.list.indexOf(value!));
+              print(item.$2);
+              if (widget.onChanged != null) widget.onChanged!(item.$2);
             },
           ),
         )

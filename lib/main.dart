@@ -13,8 +13,6 @@ import './models/setting.dart';
 import './i18n/main.dart';
 
 void main() async {
-  Get.put(SetController());
-  await SetController().init();
   runApp(const MyApp());
 }
 
@@ -23,6 +21,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    Get.put(SetController());
     return GetMaterialApp(
       title: 'R18 Comic',
       debugShowCheckedModeBanner: false,
