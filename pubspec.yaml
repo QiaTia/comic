@@ -46,7 +46,6 @@ dependencies:
       ref: knottx-latest
   permission_handler: ^10.2.0
   flutter_cache_manager: ^3.3.0
-  event: ^2.1.2
   
 dev_dependencies:
   flutter_test:

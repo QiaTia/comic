@@ -12,7 +12,11 @@ import 'package:get/get.dart';
 import './models/setting.dart';
 import './i18n/main.dart';
 
+const appName = 'R18 Comic';
+
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  Get.put(SetController());
   runApp(const MyApp());
 }
 
@@ -21,25 +25,23 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    Get.put(SetController());
     return GetMaterialApp(
-      title: 'R18 Comic',
+      title: appName,
       debugShowCheckedModeBanner: false,
       routes: {
-        "/": (context) => const MyHomePage(title: 'R18 Comic'),
+        "/": (context) => const MyHomePage(title: appName),
         "/chapter": (context) =>
             ComicChapter(id: ModalRoute.of(context)!.settings.arguments as int),
         "/detail": (context) {
           var routeArguments =
               ModalRoute.of(context)!.settings.arguments as ChapterItemProp;
           return ComicDetail(options: routeArguments);
-        }
+        },
       },
       theme: ThemeData(colorSchemeSeed: Colors.amber),
       darkTheme: ThemeData.dark(),
       translations: Messages(), // your translations
-      fallbackLocale: const Locale(
-          'zh'), // specify the fallback locale in case an invalid locale is selected.
+      fallbackLocale: const Locale('zh'),
     );
   }
 }
@@ -88,16 +90,12 @@ class _MyHomePageState extends State<MyHomePage>
       if (currentBackPressTime == null ||
           now.difference(currentBackPressTime!) > const Duration(seconds: 4)) {
         currentBackPressTime = now;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Center(child: Text('再次按下以关闭应用程序')),
-            duration: Duration(seconds: 4),
-          ),
-        );
+        Get.showSnackbar(GetSnackBar(
+          message: 'conirmExitApp'.tr,
+          duration: const Duration(seconds: 4),
+        ));
         return false;
       }
-
       // 退出请求有效
       currentBackPressTime = null;
       return true;
@@ -105,7 +103,7 @@ class _MyHomePageState extends State<MyHomePage>
 
     return PopScope(
         canPop: false,
-        onPopInvoked: (didPop) async {
+        onPopInvokedWithResult: (didPop, result) async {
           if (didPop) {
             return;
           }
@@ -128,12 +126,15 @@ class _MyHomePageState extends State<MyHomePage>
                         }
                       case 'about':
                         {
-                          Navigator.push(
-                              context, FadeRoute(page: const AboutPage()));
+                          Get.to(FadeRoute(page: const AboutPage()));
+                          break;
+                        }
+                      case 'dome':
+                        {
+                          Get.toNamed('/volume');
                           break;
                         }
                     }
-                    if (val == '') {}
                   },
                   itemBuilder: (context) => ['setting', 'about']
                       .map((name) => PopupMenuItem(

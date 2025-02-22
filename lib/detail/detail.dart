@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:io';
-
 import 'package:comic/utlis/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -8,9 +6,9 @@ import 'package:get/get.dart';
 import '../Widget/route_animation.dart';
 import '../utlis/api.dart';
 import '../utlis/request.dart';
+import '../utlis/volumeListen.dart';
 import './gallery.dart';
 import 'package:flutter/services.dart';
-import 'package:event/event.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 // Obtain shared preferences.
 
@@ -92,7 +90,6 @@ class _ComicDetail extends State<ComicDetail> {
   @override
   void initState() {
     super.initState();
-    // if (currentVolumeKeyControl()) addVolumeListen();
 
     if (widget.list != null) {
       for (var element in widget.list!) {
@@ -122,7 +119,6 @@ class _ComicDetail extends State<ComicDetail> {
 
   @override
   void dispose() {
-    // delVolumeListen();
     systemUiMode(true);
     super.dispose();
   }
@@ -132,95 +128,105 @@ class _ComicDetail extends State<ComicDetail> {
     var screenSize = MediaQuery.of(context).size;
     var controlleWidth = screenSize.width * 0.4,
         controllerBottom = (screenSize.height / 3) * 2;
-    return readerKeyboardHolder(Scaffold(
-        appBar: isAppBar
-            ? AppBar(
-                title: Text(title),
-                actions: [
-                  SizedBox(
-                    width: 98,
-                    child: TextField(
-                      textAlignVertical: TextAlignVertical.center,
-                      textAlign: TextAlign.center,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9]')) //设置只允许输入数字
-                      ],
-                      textInputAction: TextInputAction.go,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: '$currentPage / ${_photos.length}',
+    return VolumeListen(
+        onKeyEvent: (logicalKey) {
+          if (logicalKey == LogicalKeyboardKey.arrowUp ||
+              logicalKey == LogicalKeyboardKey.audioVolumeDown) {
+            jump(true);
+          } else if (logicalKey == LogicalKeyboardKey.arrowDown ||
+              logicalKey == LogicalKeyboardKey.audioVolumeUp) {
+            jump();
+          }
+        },
+        child: Scaffold(
+            appBar: isAppBar
+                ? AppBar(
+                    title: Text(title),
+                    actions: [
+                      SizedBox(
+                        width: 98,
+                        child: TextField(
+                          textAlignVertical: TextAlignVertical.center,
+                          textAlign: TextAlign.center,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9]')) //设置只允许输入数字
+                          ],
+                          textInputAction: TextInputAction.go,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            hintText: '$currentPage / ${_photos.length}',
+                          ),
+                          onSubmitted: (value) {
+                            if (value.isEmpty) return;
+                            var targetPage = int.parse(value);
+                            if (targetPage > _photos.length) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('tipEmpty!'.tr)));
+                              return;
+                            }
+                            itemScrollController.jumpTo(index: targetPage);
+                            // widget.onChange!(targetPage);
+                          },
+                        ),
                       ),
-                      onSubmitted: (value) {
-                        if (value.isEmpty) return;
-                        var targetPage = int.parse(value);
-                        if (targetPage > _photos.length) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('tipEmpty!'.tr)));
-                          return;
-                        }
-                        itemScrollController.jumpTo(index: targetPage);
-                        // widget.onChange!(targetPage);
-                      },
-                    ),
-                  ),
-                ],
-              )
-            : null,
-        body: _photos.isEmpty
-            ? Center(
-                child: Column(children: [
-                  const Padding(padding: EdgeInsets.all(80)),
-                  const CircularProgressIndicator(),
-                  const Padding(padding: EdgeInsets.all(8)),
-                  Text("loading".tr)
-                ]),
-              )
-            : Stack(clipBehavior: Clip.none, children: [
-                Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: SizedBox(
-                        width: screenSize.width,
-                        height: screenSize.height,
-                        child: _PhotoList(
-                            list: _photos,
-                            id: widget.options.id,
-                            initIndex: widget.initIndex,
-                            controller: _controller,
-                            setCurrentIndex: setCurrentIndex,
-                            itemScrollController: itemScrollController,
-                            onTapDown: ((detail) {
-                              var dy = detail.globalPosition.dy,
-                                  dx = detail.globalPosition.dx;
-                              if (dx < controlleWidth &&
-                                  dy > controllerBottom) {
-                                jump();
-                              } else if (dx > screenSize.width * 0.6 &&
-                                  dy > controllerBottom) {
-                                jump(true);
-                              } else {
-                                setAppBar();
-                              }
-                            })))),
-                _ButtonMask(
-                    show: isAppBar,
-                    string: 'nextPage'.tr,
-                    onTapDown: () {
-                      setAppBar();
-                      jump();
-                    },
-                    position: PositionType.rightBottom),
-                _ButtonMask(
-                    show: isAppBar,
-                    string: 'prePage'.tr,
-                    onTapDown: () {
-                      setAppBar();
-                      jump(true);
-                    },
-                    position: PositionType.leftBottom)
-              ])));
+                    ],
+                  )
+                : null,
+            body: _photos.isEmpty
+                ? Center(
+                    child: Column(children: [
+                      const Padding(padding: EdgeInsets.all(80)),
+                      const CircularProgressIndicator(),
+                      const Padding(padding: EdgeInsets.all(8)),
+                      Text("loading".tr)
+                    ]),
+                  )
+                : Stack(clipBehavior: Clip.none, children: [
+                    Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: SizedBox(
+                            width: screenSize.width,
+                            height: screenSize.height,
+                            child: _PhotoList(
+                                list: _photos,
+                                id: widget.options.id,
+                                initIndex: widget.initIndex,
+                                controller: _controller,
+                                setCurrentIndex: setCurrentIndex,
+                                itemScrollController: itemScrollController,
+                                onTapDown: ((detail) {
+                                  var dy = detail.globalPosition.dy,
+                                      dx = detail.globalPosition.dx;
+                                  if (dx < controlleWidth &&
+                                      dy > controllerBottom) {
+                                    jump();
+                                  } else if (dx > screenSize.width * 0.6 &&
+                                      dy > controllerBottom) {
+                                    jump(true);
+                                  } else {
+                                    setAppBar();
+                                  }
+                                })))),
+                    _ButtonMask(
+                        show: isAppBar,
+                        string: 'nextPage'.tr,
+                        onTapDown: () {
+                          setAppBar();
+                          jump();
+                        },
+                        position: PositionType.rightBottom),
+                    _ButtonMask(
+                        show: isAppBar,
+                        string: 'prePage'.tr,
+                        onTapDown: () {
+                          setAppBar();
+                          jump(true);
+                        },
+                        position: PositionType.leftBottom)
+                  ])));
   }
 }
 
@@ -465,68 +471,4 @@ class _ButtonMask extends StatelessWidget {
           : const SizedBox(),
     );
   }
-}
-
-////////////////////////////////
-
-// 仅支持安卓
-// 监听后会拦截安卓手机音量键
-// 仅最后一次监听生效
-// event可能为DOWN/UP
-
-var _volumeListenCount = 0;
-
-void _onVolumeEvent(dynamic args) {
-  _readerControllerEvent.broadcast(_ReaderControllerEventArgs("$args"));
-}
-
-EventChannel volumeButtonChannel = const EventChannel("volume_button");
-StreamSubscription? volumeS;
-
-void addVolumeListen() {
-  _volumeListenCount++;
-  if (_volumeListenCount == 1) {
-    volumeS =
-        volumeButtonChannel.receiveBroadcastStream().listen(_onVolumeEvent);
-  }
-}
-
-void delVolumeListen() {
-  _volumeListenCount--;
-  if (_volumeListenCount == 0) {
-    volumeS?.cancel();
-  }
-}
-
-Widget readerKeyboardHolder(Widget widget) {
-  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-    widget = RawKeyboardListener(
-      focusNode: FocusNode(),
-      autofocus: true,
-      onKey: (event) {
-        if (event is RawKeyDownEvent) {
-          if (event.isKeyPressed(LogicalKeyboardKey.arrowUp)) {
-            _readerControllerEvent.broadcast(_ReaderControllerEventArgs("UP"));
-          }
-          if (event.isKeyPressed(LogicalKeyboardKey.arrowDown)) {
-            _readerControllerEvent
-                .broadcast(_ReaderControllerEventArgs("DOWN"));
-          }
-        }
-      },
-      child: widget,
-    );
-  }
-  return widget;
-}
-
-////////////////////////////////
-
-Event<_ReaderControllerEventArgs> _readerControllerEvent =
-    Event<_ReaderControllerEventArgs>();
-
-class _ReaderControllerEventArgs extends EventArgs {
-  final String key;
-
-  _ReaderControllerEventArgs(this.key);
 }

@@ -33,6 +33,7 @@ class Messages extends Translations {
           'tipRecordEmpty': '已经没有啦！',
           'contentOrigin': '所有内容均来源网络',
           'enterPlease': '请输入内容!',
+          'conirmExitApp': '再次按下以关闭应用程序'
         },
         'en': {
           'name': 'R18 Comic',
@@ -64,6 +65,7 @@ class Messages extends Translations {
           'tipRecordEmpty': 'All done!',
           'contentOrigin': 'All content sourced from the internet.',
           'enterPlease': 'Please enter content!',
+          'conirmExitApp': 'Press again to close the application'
         },
         'ja': {
           'name': 'R18 Comic',
@@ -95,6 +97,7 @@ class Messages extends Translations {
           'tipRecordEmpty': 'もうありません！',
           'contentOrigin': '全てのコンテンツはネットワークから取得されています。',
           'enterPlease': '内容を入力してください！',
+          'conirmExitApp': 'アプリケーションを閉じるにはもう一度押してください'
         },
       };
 }
