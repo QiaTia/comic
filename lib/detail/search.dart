@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../Widget/grid_photo_list.dart';
 import '../Widget/pagination.dart';
 import '../Widget/white_data.dart';
-import '../utlis/api.dart';
+import '../utils/api.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});

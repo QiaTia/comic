@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../utlis/storage.dart';
+import '../utils/storage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'detail.dart';
-import '../utlis/api.dart';
+import '../utils/api.dart';
 
 class ComicHistory extends StatefulWidget {
   const ComicHistory({super.key});

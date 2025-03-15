@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../utlis/image.dart';
+import '../utils/image.dart';
 
 class GalleryList extends StatefulWidget {
   GalleryList(

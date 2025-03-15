@@ -6,8 +6,7 @@ import 'detail/detail.dart';
 import 'detail/chapter.dart';
 import 'detail/search.dart';
 import 'detail/history.dart';
-import './Widget/route_animation.dart';
-import 'utlis/api.dart';
+import 'utils/api.dart';
 import 'package:get/get.dart';
 import './models/setting.dart';
 import './i18n/main.dart';
@@ -120,13 +119,12 @@ class _MyHomePageState extends State<MyHomePage>
                     switch (val) {
                       case 'setting':
                         {
-                          Navigator.push(
-                              context, FadeRoute(page: const SettingPage()));
+                          Get.to(() => const SettingPage(), transition: Transition.zoom);
                           break;
                         }
                       case 'about':
                         {
-                          Get.to(FadeRoute(page: const AboutPage()));
+                          Get.to(() => const AboutPage(), transition: Transition.zoom);
                           break;
                         }
                       case 'dome':
@@ -146,15 +144,13 @@ class _MyHomePageState extends State<MyHomePage>
                 IconButton(
                     tooltip: 'History',
                     onPressed: () {
-                      Navigator.push(
-                          context, FadeRoute(page: const ComicHistory()));
+                      Get.to(() => const ComicHistory(), transition: Transition.zoom);
                     },
                     icon: const Icon(Icons.history)),
                 IconButton(
                     tooltip: 'Search',
                     onPressed: () {
-                      Navigator.push(
-                          context, FadeRoute(page: const SearchPage()));
+                      Get.to(() => const SearchPage(), transition: Transition.zoom);
                     },
                     icon: const Icon(Icons.search)),
                 const Padding(padding: EdgeInsets.symmetric(horizontal: 8))

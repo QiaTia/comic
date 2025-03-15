@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../Widget/grid_photo_list.dart';
 import '../Widget/pagination.dart';
-import '../utlis/api.dart';
+import '../utils/api.dart';
 
 class ComicChapter extends StatefulWidget {
   const ComicChapter(

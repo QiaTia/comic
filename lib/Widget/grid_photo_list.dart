@@ -1,7 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import '../utlis/api.dart';
-import '../utlis/request.dart';
+import '../utils/api.dart';
+import '../utils/request.dart';
 
 class GridPhotoList extends StatefulWidget {
   const GridPhotoList({Key? key, required this.list}) : super(key: key);

@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'package:comic/utlis/storage.dart';
+import 'package:comic/utils/storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
 import '../Widget/route_animation.dart';
-import '../utlis/api.dart';
-import '../utlis/request.dart';
-import '../utlis/volumeListen.dart';
+import '../utils/api.dart';
+import '../utils/request.dart';
+import '../utils/volumeListen.dart';
 import './gallery.dart';
 import 'package:flutter/services.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
