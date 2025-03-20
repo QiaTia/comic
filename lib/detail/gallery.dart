@@ -49,7 +49,7 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.linear);
               } else if (currentIndex > 0 &&
-                  ['Arrow Top', 'Arrow Left'].contains(keyLabel)) {
+                  ['Arrow Top', 'Arrow Up', 'Arrow Left'].contains(keyLabel)) {
                 // 上一页
                 widget.pageController.previousPage(
                     duration: const Duration(milliseconds: 300),
