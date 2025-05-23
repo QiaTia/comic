@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:layout/layout.dart';
 import '../utils/api.dart';
 import '../utils/request.dart';
 
@@ -13,24 +14,29 @@ class GridPhotoList extends StatefulWidget {
 class __GridPhotoList extends State<GridPhotoList> {
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-      var crossAxisCount = constraints.maxWidth /
-          175; // constraints.maxWidth > constraints.maxHeight ? 4 : 2;
-      return GridView.count(
-        restorationId: 'grid_view_demo_grid_offset',
-        crossAxisCount: crossAxisCount > 5 ? 5 : crossAxisCount.toInt(),
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        childAspectRatio: 1,
-        children: widget.list.map<Widget>((item) {
-          return _GridPhotoItem(
-            item: item,
-          );
-        }).toList(),
-      );
-    });
+    /// 计算间距
+    final double padding = context.layout.value(
+      xs: 8,  // sm value will be like xs 0.0
+      md: 12, // lg value will be like md 24.0
+      xl: 14
+    );
+    /// 计算列数
+    final int crossAxisCount = context.layout.value(
+      xs: 2,
+      sm: 3,
+      md: 4,
+      lg: 6,
+    );
+    return GridView.count(
+      restorationId: 'grid_view_demo_grid_offset',
+      crossAxisCount: crossAxisCount,
+      mainAxisSpacing: padding,
+      crossAxisSpacing: padding,
+      padding: EdgeInsets.all(padding),
+      childAspectRatio: 1,
+      children: widget.list
+        .map((item) => _GridPhotoItem(item: item)).toList(),
+    );
   }
 }
 

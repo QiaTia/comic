@@ -35,6 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   shared_preferences: ^2.0.15
   get:
+  layout:
   http: 0.13.5
   html: 0.15.1 
   cached_network_image: ^3.3.1

@@ -10,6 +10,7 @@ import 'utils/api.dart';
 import 'package:get/get.dart';
 import './models/setting.dart';
 import './i18n/main.dart';
+import 'package:layout/layout.dart';
 
 const appName = 'R18 Comic';
 
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
+    return Layout(child: GetMaterialApp(
       title: appName,
       debugShowCheckedModeBanner: false,
       routes: {
@@ -41,7 +42,7 @@ class MyApp extends StatelessWidget {
       darkTheme: ThemeData.dark(),
       translations: Messages(), // your translations
       fallbackLocale: const Locale('zh'),
-    );
+    ));
   }
 }
 
@@ -71,12 +72,6 @@ class _MyHomePageState extends State<MyHomePage>
   @override
   void initState() {
     super.initState();
-    // httpService
-    //     .get('/content-9d9a75db16285991acd0dbc7146de795-1.html')
-    //     .then((data) {
-    //   print(data['data'] ?? '');
-    // });
-
     _tabController = TabController(length: tabs.length, vsync: this);
   }
 
