@@ -319,8 +319,8 @@ class __PhotoListWidget extends State<_PhotoList> {
         scrollOffsetController: widget.controller,
         itemPositionsListener: itemPositionsListener,
         scrollOffsetListener: scrollOffsetListener,
-        // cacheExtent: 1280,
-        minCacheExtent: 1280,
+        /// 预加载一页半的内容
+        minCacheExtent: MediaQuery.of(context).size.height * 1.4,
         // restorationId: widget.rid,
         itemBuilder: (context, index) {
           //如果到了表尾
