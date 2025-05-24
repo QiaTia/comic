@@ -14,7 +14,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 /// 保存文件或图片到本地
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 
 import 'request.dart';
 
@@ -23,7 +23,10 @@ class ImageUtil {
   static Future<bool> saveImage(String imageUrl) async {
     try {
       if (imageUrl.isEmpty) throw '保存失败，图片不存在！';
-
+      if (!(Platform.isAndroid || Platform.isIOS)) {
+        /// 其他平台不支持保存图片
+        throw '不支持的操作系统';
+      }
       /// 权限检测
       PermissionStatus storageStatus = await Permission.storage.status;
       if (storageStatus != PermissionStatus.granted) {
@@ -51,7 +54,7 @@ class ImageUtil {
 
       /// 保存图片
       final result = Map<String, dynamic>.from(
-          await ImageGallerySaver.saveImage(imageBytes));
+          await ImageGallerySaverPlus.saveImage(imageBytes));
       if (result.putIfAbsent('isSuccess', () => false)) return true;
       throw result;
     } catch (e) {

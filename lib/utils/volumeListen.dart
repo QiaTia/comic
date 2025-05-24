@@ -14,10 +14,10 @@ class VolumeListen extends StatefulWidget {
   final Widget child;
   final Function(LogicalKeyboardKey logicalKey)? onKeyEvent;
   @override
-  _VolumelistenState createState() => _VolumelistenState();
+  _VolumeListenState createState() => _VolumeListenState();
 }
 
-class _VolumelistenState extends State<VolumeListen> {
+class _VolumeListenState extends State<VolumeListen> {
   // 仅支持安卓
   // 监听后会拦截安卓手机音量键
   // event可能为DOWN/UP

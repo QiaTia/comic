@@ -126,7 +126,7 @@ class _ComicDetail extends State<ComicDetail> {
   @override
   Widget build(BuildContext context) {
     var screenSize = MediaQuery.of(context).size;
-    var controlleWidth = screenSize.width * 0.4,
+    var controllerWidth = screenSize.width * 0.4,
         controllerBottom = (screenSize.height / 3) * 2;
     return VolumeListen(
         onKeyEvent: (logicalKey) {
@@ -200,7 +200,7 @@ class _ComicDetail extends State<ComicDetail> {
                                 onTapDown: ((detail) {
                                   var dy = detail.globalPosition.dy,
                                       dx = detail.globalPosition.dx;
-                                  if (dx < controlleWidth &&
+                                  if (dx < controllerWidth &&
                                       dy > controllerBottom) {
                                     jump();
                                   } else if (dx > screenSize.width * 0.6 &&
@@ -239,7 +239,7 @@ class _PhotoList extends StatefulWidget {
       this.setCurrentIndex,
       this.itemScrollController,
       this.onTapDown});
-  final _ListPhotoItemonTapDown? onTapDown;
+  final _ListPhotoItemTapDown? onTapDown;
   final ScrollOffsetController? controller;
   final ItemScrollController? itemScrollController;
   void Function(int page)? setCurrentIndex;
@@ -319,8 +319,8 @@ class __PhotoListWidget extends State<_PhotoList> {
         scrollOffsetController: widget.controller,
         itemPositionsListener: itemPositionsListener,
         scrollOffsetListener: scrollOffsetListener,
-        // cacheExtent: 1280,
-        minCacheExtent: 1280,
+        /// 预加载一页半的内容
+        minCacheExtent: MediaQuery.of(context).size.height * 1.4,
         // restorationId: widget.rid,
         itemBuilder: (context, index) {
           //如果到了表尾
@@ -370,7 +370,7 @@ class __PhotoListWidget extends State<_PhotoList> {
 }
 
 typedef _ListPhotoItemTap = void Function();
-typedef _ListPhotoItemonTapDown = void Function(TapDownDetails detail);
+typedef _ListPhotoItemTapDown = void Function(TapDownDetails detail);
 
 class _ListPhotoItem extends StatelessWidget {
   const _ListPhotoItem(
@@ -378,7 +378,7 @@ class _ListPhotoItem extends StatelessWidget {
       : super(key: key);
   final _Photo item;
   final _ListPhotoItemTap? onLongPress;
-  final _ListPhotoItemonTapDown? onTapDown;
+  final _ListPhotoItemTapDown? onTapDown;
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -30,10 +31,11 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
   Widget build(BuildContext context) {
     return PopScope(
         canPop: false,
-        onPopInvoked: (didPop) async {
+        onPopInvokedWithResult: (didPop, _) async {
           if (didPop) {
             return;
           }
+          /// 关闭时返回当前图片索引
           Navigator.pop(context, currentIndex);
         },
         child: KeyboardListener(
@@ -117,14 +119,11 @@ class _PhotoViewGalleryScreenState extends State<GalleryList> {
                       onPressed: () async {
                         var promise = await ImageUtil.saveImage(
                             widget.list[currentIndex]);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(
-                          promise ? "Sucess!" : "Fail!",
-                          style: TextStyle(
-                              color: promise
-                                  ? Colors.white
-                                  : const Color(0xFFFF4081)),
-                        )));
+                          Get.snackbar( '提示', promise ? '保存成功' : '保存失败',
+                            colorText: promise
+                                ? Colors.white
+                                : const Color(0xFFFF4081),
+                          );
                       },
                     ),
                   ),
