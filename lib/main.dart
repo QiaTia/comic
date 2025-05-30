@@ -1,11 +1,11 @@
-import 'package:comic/detail/about.dart';
-import 'package:comic/detail/setting.dart';
+import 'package:comic/view/info/about.dart';
+import 'package:comic/view/info/setting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'detail/detail.dart';
-import 'detail/chapter.dart';
-import 'detail/search.dart';
-import 'detail/history.dart';
+import 'view/detail/detail.dart';
+import 'view/detail/chapter.dart';
+import 'view/detail/search.dart';
+import 'view/detail/history.dart';
 import 'utils/api.dart';
 import 'package:get/get.dart';
 import './models/setting.dart';

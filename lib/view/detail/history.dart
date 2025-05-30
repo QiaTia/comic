@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../utils/storage.dart';
+import '../../utils/historyStorage.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'detail.dart';
-import '../utils/api.dart';
+import '../../utils/api.dart';
 
 class ComicHistory extends StatefulWidget {
   const ComicHistory({super.key});
@@ -12,11 +12,13 @@ class ComicHistory extends StatefulWidget {
 }
 
 class _ComicHistory extends State<ComicHistory> {
-  List<HistorytItem> list = [];
+  List<HistoryItem> list = [];
   final ScrollController _controller = ScrollController();
   @override
   void initState() {
     super.initState();
+    /// 初始化历史记录
+    // syncData();
     historyStorage.getList().then((value) {
       setState(() {
         list = value.reversed.toList();
@@ -24,14 +26,80 @@ class _ComicHistory extends State<ComicHistory> {
     });
   }
 
-  void onDetail(HistorytItem item, BuildContext content) {
-    Navigator.of(context).push(MaterialPageRoute(
-        builder: (content) => ComicDetail(
-              list: item.list,
-              initIndex: item.index ?? 0,
-              options: ChapterItemProp(
-                  id: item.id, title: item.title, image: item.image),
-            )));
+  /// 同步数据
+  void syncData() {
+    setState(() {
+      list = historyStorage.historyList.reversed.toList();
+    });
+  }
+  /// 删所有历史记录
+  void onRemoveAll() async {
+   await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('deleteTip'.tr),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await historyStorage.clear();
+              setState(() {
+                list = [];
+              });
+              Get.back();
+              },
+            child: Text('deleteTipConfirm'.tr,
+                style: const TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              // 关闭对话框
+            },
+            child: Text('deleteTipCancel'.tr),
+          )
+        ],
+      ),
+    );
+  }
+  /// 删除历史记录
+  void onDelete(HistoryItem item) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('deleteTheTip'.tr),
+        content: Text(item.title),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await historyStorage.removeItem(item.id);
+              syncData();
+              Get.back();
+            },
+            child: Text('deleteTipConfirm'.tr,
+                style: const TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              // 关闭对话框
+            },
+            child: Text('deleteTipCancel'.tr),
+          )
+        ],
+      ),
+    );
+  }
+  /// 去历史记录详情
+  void onDetail(HistoryItem item) async {
+    var nextPage = ComicDetail(
+      list: item.list,
+      initIndex: item.index ?? 0,
+      options: ChapterItemProp(
+          id: item.id, title: item.title, image: item.image),
+    );
+    await Navigator.of(context).push(MaterialPageRoute(builder: (content) => nextPage));
+    /// 回来之后同步下数据
+    syncData();
     // Navigator.pushNamed(context, '/detail', arguments: item);
   }
 
@@ -42,34 +110,7 @@ class _ComicHistory extends State<ComicHistory> {
         title: Text('history'.tr),
         actions: [
           IconButton(
-              onPressed: () async {
-                await showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text('deleteTip'.tr),
-                    actions: [
-                      TextButton(
-                        onPressed: () async {
-                          var navitator = Navigator.of(context);
-                          await historyStorage.clear();
-                          setState(() {
-                            list = [];
-                          });
-                          navitator.pop();
-                        },
-                        child: Text('deleteTipConfirm'.tr,
-                            style: const TextStyle(color: Colors.grey)),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        child: Text('deleteTipCancel'.tr),
-                      )
-                    ],
-                  ),
-                );
-              },
+              onPressed: onRemoveAll,
               tooltip: 'clear'.tr,
               icon: const Icon(Icons.clear_all_outlined))
         ],
@@ -86,13 +127,15 @@ class _ComicHistory extends State<ComicHistory> {
                           style: const TextStyle(color: Colors.grey)),
                     )
                   : ListTile(
-                      onTap: () => onDetail(list[index], context),
+                      onTap: () => onDetail(list[index]),
+                      onLongPress: () => onDelete(list[index]),
                       contentPadding: const EdgeInsets.symmetric(vertical: 8),
                       title: Text(list[index].title),
                       subtitle: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(list[index].creatAt),
+                          Text(list[index].createdAt,
+                              style: const TextStyle(color: Colors.grey)),
                           Text(
                               "${list[index].index}/${list[index].list.length}",
                               style: const TextStyle(color: Colors.grey))

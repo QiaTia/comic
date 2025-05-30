@@ -1,18 +1,18 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class HistorytItem {
-  // HistorytItem(this.id, this.title, this.image, this.creatAt);
+class HistoryItem {
+  // HistoryItem(this.id, this.title, this.image, this.creatAt);
   final String id;
   final String title;
   final String image;
   final int? index;
   final List<String> list;
-  final String creatAt;
-  HistorytItem(Map<String, dynamic> json)
+  final String createdAt;
+  HistoryItem(Map<String, dynamic> json)
       : title = json['title'],
         id = json['id'],
-        creatAt = json['creat_at'],
+        createdAt = json['created_at'] ?? json['creat_at'] ?? '',
         index = json['index'] ?? 0,
         list = (json['list'] as List<dynamic>? ?? [])
             .map((e) => e.toString())
@@ -23,26 +23,30 @@ class HistorytItem {
         'title': title,
         'id': id,
         'image': image,
-        'creat_at': creatAt,
+        'created_at': createdAt,
         'list': list,
         'index': index,
       };
 }
 
 class Storage {
-  SharedPreferences? prefs;
-  late String _storageKey;
-  Storage([key = 'history']) {
-    _storageKey = key;
-    SharedPreferences.getInstance().then((value) => {prefs = value});
+  SharedPreferences? pref;
+  List<HistoryItem> historyList = [];
+  final String _storageKey = 'history';
+  /// 初始化 SharedPreferences 实例
+  Storage() {
+    _initInstance();
   }
-
-  /// 初始化实列
+  /// 获取 SharedPreferences 实例
   Future<SharedPreferences> _initInstance() async {
-    prefs ??= await SharedPreferences.getInstance();
-    return prefs!;
+    if (pref != null) {
+      return pref!;
+    }
+    pref = await SharedPreferences.getInstance();
+    _getList();
+    return pref!;
   }
-
+  /// 获取存储的字符串列表
   Future<List<String>> _getList() async {
     return (await _initInstance()).getStringList(_storageKey) ?? [];
   }
@@ -54,37 +58,44 @@ class Storage {
       required String image,
       int? index = 0,
       required List<String> images}) async {
-    var list = await getList();
-    var fIndex = list.indexWhere((element) => element.id == id);
-    var newItem = HistorytItem({
+    var fIndex = historyList.indexWhere((element) => element.id == id);
+    var newItem = HistoryItem({
       'id': id,
       'title': title,
       'image': image,
       'list': images,
-      'creat_at': _getCurretnDate(),
+      'created _at': _getCurrentDate(),
       'index': index,
     });
     // 存在提到首位
     if (fIndex != -1) {
-      list.removeAt(fIndex);
+      historyList.removeAt(fIndex);
     }
-    list.add(newItem);
-
+    historyList.add(newItem);
+    await saveList();
+  }
+  /// 保存历史记录列表到本地
+  Future<void> saveList() async {
     await (await _initInstance())
-        .setStringList(_storageKey, list.map((e) => jsonEncode(e)).toList());
+        .setStringList(_storageKey, historyList.map((e) => jsonEncode(e)).toList());
   }
 
   /// 获取序列化列表
-  Future<List<HistorytItem>> getList() async {
+  Future<List<HistoryItem>> getList() async {
     var list = await _getList();
-    return list.map((e) => HistorytItem(json.decode(e))).toList();
+    historyList = list.map((e) => HistoryItem(json.decode(e))).toList();
+    return historyList;
+  }
+  /// 删除历史记录
+  Future<void> removeItem(String id) {
+    historyList.removeWhere((element) => element.id == id);
+    return saveList();
   }
 
   /// 保存浏览记录
-  Future<void> saveIndex({required String id, required int index}) async {
-    var item = (await getList()).lastWhere((element) => element.id == id);
-    // print(item.index);
-    save(
+  Future<void> saveIndex({required String id, required int index}) {
+    var item = historyList.lastWhere((element) => element.id == id);
+    return save(
         id: id,
         title: item.title,
         image: item.image,
@@ -95,10 +106,11 @@ class Storage {
   ///清除本地存储
   Future<void> clear() async {
     (await _initInstance()).remove(_storageKey);
+    historyList = [];
   }
 }
 
-String _getCurretnDate() {
+String _getCurrentDate() {
   var dateTime = DateTime.now();
   // var year = dateTime.year;
   // var month = dateTime.month;

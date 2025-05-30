@@ -1,13 +1,13 @@
 import 'dart:async';
-import 'package:comic/utils/storage.dart';
+import 'package:comic/utils/historyStorage.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:get/get.dart';
-import '../Widget/route_animation.dart';
-import '../utils/api.dart';
-import '../utils/request.dart';
-import '../utils/volumeListen.dart';
-import './gallery.dart';
+import '../../widget/route_animation.dart';
+import '../../utils/api.dart';
+import '../../utils/request.dart';
+import '../../utils/volumeListen.dart';
+import 'gallery.dart';
 import 'package:flutter/services.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 // Obtain shared preferences.

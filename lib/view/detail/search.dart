@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../Widget/grid_photo_list.dart';
-import '../Widget/pagination.dart';
-import '../Widget/white_data.dart';
-import '../utils/api.dart';
+import '../../widget/grid_photo_list.dart';
+import '../../widget/pagination.dart';
+import '../../widget/white_data.dart';
+import '../../utils/api.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
