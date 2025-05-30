@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../utils/historyStorage.dart';
 
 const themeList = [
   Colors.amber,
@@ -102,6 +103,7 @@ class SetController extends GetxController {
     readThemeMode(prefs);
     readThemeIndex(prefs);
     readLanguage(prefs);
+    historyStorage.getList();
     super.onInit();
   }
 }
