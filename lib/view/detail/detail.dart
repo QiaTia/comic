@@ -40,6 +40,7 @@ class _Photo {
 class _ComicDetail extends State<ComicDetail> {
   final List<_Photo> _photos = [];
   String title = "";
+  String coverUrl = '';
   bool isAppBar = true;
   int currentPage = 0;
   final ScrollOffsetController _controller = ScrollOffsetController();
@@ -87,34 +88,37 @@ class _ComicDetail extends State<ComicDetail> {
         curve: Curves.linear);
   }
 
-  @override
-  void initState() {
-    super.initState();
-
+  /// 初始化内容
+  void init() async {
     if (widget.list != null) {
+      await Future.delayed(const Duration(seconds: 1));
       for (var element in widget.list!) {
         addItem(element);
       }
-      Future.delayed(const Duration(milliseconds: 800), () {
-        //延时执行的代码
-        // print("3秒后执行");
-        itemScrollController.jumpTo(index: widget.initIndex);
-      });
+      /** 等待列表加载好再跳转 */
+      await Future.delayed(const Duration(milliseconds: 800));
+      itemScrollController.jumpTo(index: widget.initIndex);
     } else {
-      apiServer.getDetail(widget.options.id, widget.page).then((result) {
-        for (var element in result.data) {
-          addItem(element);
-        }
-        historyStorage.save(
-            id: widget.options.id,
-            title: result.title!,
-            image: widget.options.image,
-            images: result.data,
-            index: widget.initIndex);
-      });
+      var result = await apiServer.getDetail(widget.options.id, widget.page);
+      for (var element in result.data) {
+        addItem(element);
+      }
+      // 保存历史记录
+      historyStorage.save(
+          id: widget.options.id,
+          title: result.title!,
+          image: widget.options.image,
+          images: result.data,
+          index: widget.initIndex);
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
     setTitle(widget.options.title);
     setAppBar();
+    init();
   }
 
   @override
@@ -176,9 +180,17 @@ class _ComicDetail extends State<ComicDetail> {
             body: _photos.isEmpty
                 ? Center(
                     child: Column(children: [
-                      const Padding(padding: EdgeInsets.all(80)),
-                      const CircularProgressIndicator(),
-                      const Padding(padding: EdgeInsets.all(8)),
+                      const Padding(padding: EdgeInsets.only(top: 40)),
+                      Hero(
+                        tag: widget.options.image,
+                        child: CachedNetworkImage(
+                          imageUrl: widget.options.image,
+                          fit: BoxFit.cover,),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.only(top: 40, bottom: 20),
+                        child: CircularProgressIndicator(),
+                      ),
                       Text("loading".tr)
                     ]),
                   )

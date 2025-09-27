@@ -53,14 +53,16 @@ class _GridPhotoItem extends StatelessWidget {
     final Widget image = Material(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       clipBehavior: Clip.antiAlias,
-      child: CachedNetworkImage(
-        imageUrl: item.image,
-        httpHeaders: imageHeader,
-        fit: BoxFit.cover,
-        progressIndicatorBuilder: (context, url, downloadProgress) =>
-            CircularProgressIndicator(value: downloadProgress.progress),
-        errorWidget: (context, url, error) => const Icon(Icons.error),
-      ),
+      child: Hero(
+        tag: item.image, 
+        child: CachedNetworkImage(
+          imageUrl: item.image,
+          httpHeaders: imageHeader,
+          fit: BoxFit.cover,
+          progressIndicatorBuilder: (context, url, downloadProgress) =>
+              CircularProgressIndicator(value: downloadProgress.progress),
+          errorWidget: (context, url, error) => const Icon(Icons.error),
+        )),
     );
 
     return InkWell(

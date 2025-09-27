@@ -95,7 +95,9 @@ class _ComicHistory extends State<ComicHistory> {
       list: item.list,
       initIndex: item.index ?? 0,
       options: ChapterItemProp(
-          id: item.id, title: item.title, image: item.image),
+          id: item.id,
+          title: item.title,
+          image: item.image),
     );
     await Navigator.of(context).push(MaterialPageRoute(builder: (content) => nextPage));
     /// 回来之后同步下数据
@@ -141,16 +143,18 @@ class _ComicHistory extends State<ComicHistory> {
                               style: const TextStyle(color: Colors.grey))
                         ],
                       ),
-                      leading: CachedNetworkImage(
-                        imageUrl: list[index].image,
-                        fit: BoxFit.cover,
-                        progressIndicatorBuilder:
-                            (context, url, downloadProgress) =>
-                                CircularProgressIndicator(
-                                    value: downloadProgress.progress),
-                        errorWidget: (context, url, error) =>
-                            const Icon(Icons.error),
-                      ),
+                      leading: Hero(
+                        tag: list[index].image,
+                          child:  CachedNetworkImage(
+                          imageUrl: list[index].image,
+                          fit: BoxFit.cover,
+                          progressIndicatorBuilder:
+                              (context, url, downloadProgress) =>
+                                  CircularProgressIndicator(
+                                      value: downloadProgress.progress),
+                          errorWidget: (context, url, error) =>
+                              const Icon(Icons.error),
+                        ))
                     ),
               itemCount: list.length + 1)
           : Container(
