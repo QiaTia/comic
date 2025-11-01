@@ -4,9 +4,9 @@ import 'package:html/dom.dart';
 
 class APIServer {
   Future<ChapterProp> getChapter(int id, [int page = 1, int tag = 0]) async {
-    final content = await httpService.get("/list-$id-$tag-$page.html");
+    final result = await httpService.get("/list-$id-$tag-$page.html");
     Document document =
-        parse(content.putIfAbsent("data", () => "<html></html>"));
+        parse(result.body ?? "<html></html>");
     /** 获取分类名称 */
     String name = document.querySelector('.content > .imenu')!.text.trim();
     /** 组合标签信息 */
@@ -49,10 +49,10 @@ class APIServer {
   }
 
   Future<DetailProp> getDetail(String id, [int page = 1]) async {
-    final content = await httpService.get("/content-$id-$page.html");
+    final result = await httpService.get("/content-$id-$page.html");
     // value.hashCode('data')
     Document document =
-        parse(content.putIfAbsent("data", () => "<html></html>"));
+        parse(result.body ?? "<html></html>");
     List<Element> images = document.querySelectorAll('.contentmh > li >  img');
     String? title = document.querySelector('.services-desc > h2')?.text;
     List<String> data = [];
@@ -72,9 +72,9 @@ class APIServer {
   }
 
   Future<ChapterProp> getSearch(String val, [int page = 1]) async {
-    final content = await httpService.get("/search.php?key=$val&p=$page");
+    final result = await httpService.get("/search.php?key=$val&p=$page");
     Document document =
-        parse(content.putIfAbsent("data", () => "<html></html>"));
+        parse(result.body ?? "<html></html>");
     /** 获取分类名称 */
     String name = '';
     /** 组合标签信息 */
