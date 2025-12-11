@@ -43,6 +43,7 @@ dependencies:
   image_gallery_saver_plus:
   permission_handler: ^10.2.0
   flutter_cache_manager: ^3.3.0
+  pool:
   
 dev_dependencies:
   flutter_test:

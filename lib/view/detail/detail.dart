@@ -10,7 +10,9 @@ import '../../utils/volumeListen.dart';
 import 'gallery.dart';
 import 'package:flutter/services.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import '../../Widget/image/image-preloader.dart';
 // Obtain shared preferences.
+final _preloader = ImagePreloader();
 
 class ComicDetail extends StatefulWidget {
   const ComicDetail(
@@ -41,16 +43,17 @@ class _ComicDetail extends State<ComicDetail> {
   final List<_Photo> _photos = [];
   String title = "";
   String coverUrl = '';
+  // 是否展示头部标题栏
   bool isAppBar = true;
-  int currentPage = 0;
+  // 当前页数
+  RxInt currentPage = 0.obs;
+  RxBool isImagePreloaded = false.obs;
   final ScrollOffsetController _controller = ScrollOffsetController();
   final ItemScrollController itemScrollController = ItemScrollController();
 
   /// 更新当前页数
   void setCurrentIndex(int page) {
-    setState(() {
-      currentPage = page;
-    });
+    currentPage.value = page;
   }
 
   void addItem(String url) {
@@ -88,6 +91,15 @@ class _ComicDetail extends State<ComicDetail> {
         curve: Curves.linear);
   }
 
+  void onPreload() async {
+    final list = _photos.map((el) => el.url).toList();
+    if (list.isEmpty) {
+      Get.snackbar(title, "请等待⌛️图片列表完成 !");
+      return;
+    }
+    await _preloader.preloadImages(list, context);
+    isImagePreloaded.value = true;
+  }
   /// 初始化内容
   void init() async {
     if (widget.list != null) {
@@ -143,13 +155,15 @@ class _ComicDetail extends State<ComicDetail> {
           }
         },
         child: Scaffold(
-            appBar: isAppBar
-                ? AppBar(
+            appBar: isAppBar ? AppBar(
                     title: Text(title),
                     actions: [
+                      IconButton(
+                        onPressed: onPreload,
+                        icon: Obx(() => isImagePreloaded.value ? const Icon(Icons.download_done) : const Icon(Icons.download))),
                       SizedBox(
                         width: 98,
-                        child: TextField(
+                        child:Obx(() => TextField(
                           textAlignVertical: TextAlignVertical.center,
                           textAlign: TextAlign.center,
                           inputFormatters: [
@@ -159,7 +173,7 @@ class _ComicDetail extends State<ComicDetail> {
                           textInputAction: TextInputAction.go,
                           keyboardType: TextInputType.number,
                           decoration: InputDecoration(
-                            hintText: '$currentPage / ${_photos.length}',
+                            hintText: '${currentPage.value} / ${_photos.length}',
                           ),
                           onSubmitted: (value) {
                             if (value.isEmpty) return;
@@ -172,7 +186,7 @@ class _ComicDetail extends State<ComicDetail> {
                             itemScrollController.jumpTo(index: targetPage);
                             // widget.onChange!(targetPage);
                           },
-                        ),
+                        )),
                       ),
                     ],
                   )
@@ -335,8 +349,12 @@ class __PhotoListWidget extends State<_PhotoList> {
         minCacheExtent: MediaQuery.of(context).size.height * 1.4,
         // restorationId: widget.rid,
         itemBuilder: (context, index) {
+          // 预先缓存下一张内容
+          if (_list[index + 1].title != loadingTag) {
+            _preloader.preloadImage(_list[index + 1].url, context);
+          }
           //如果到了表尾
-          if (_list[index].title == loadingTag) {
+          else if (_list[index].title == loadingTag) {
             //未渲染完成，继续获取数据
             if (_list.length - 1 < widget.list.length - 1) {
               //获取数据
@@ -367,12 +385,12 @@ class __PhotoListWidget extends State<_PhotoList> {
             item: _list[index],
             onTapDown: widget.onTapDown,
             onLongPress: () async {
-              // Todo 点击查看大图
-              int result = await Navigator.of(context).push(FadeRoute(
-                  page: GalleryList(
-                list: widget.list.map((e) => e.url).toList(),
-                index: index,
-              )));
+              // 点击查看大图
+              int result = await Get.to(FadeRoute(page: GalleryList(
+                  list: widget.list.map((e) => e.url).toList(),
+                  index: index,
+                )));
+              // int result = await Navigator.of(context).push();
               // 同步查看位置
               widget.itemScrollController?.jumpTo(index: result);
             },
