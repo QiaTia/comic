@@ -2,11 +2,16 @@ import 'package:comic/view/info/about.dart';
 import 'package:comic/view/info/setting.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'view/detail/detail.dart';
 import 'view/detail/chapter.dart';
 import 'view/detail/search.dart';
 import 'view/detail/history.dart';
 import 'utils/api.dart';
+import 'utils/cloudflare.dart';
+import 'utils/cloudflare_bridge.dart';
+import 'utils/turnstile_solver.dart';
+import 'utils/local_proxy.dart';
 import 'package:get/get.dart';
 import './models/setting.dart';
 import './i18n/main.dart';
@@ -17,6 +22,16 @@ const appName = 'R18 Comic';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Get.put(SetController());
+  // 本地 CONNECT 代理：部分 ROM（realme/OPPO）的 HTTPDNS 会劫持 App 进程对
+  // punycode 域名的解析（Failed host lookup），请求层 findProxy 会指向它。
+  await CfLocalProxy.start();
+  // 解析当前可用的目标域名（该站域名轮换频繁，旧域名会停止 DNS 解析），
+  // 必须在 runApp 之前完成，请求层依赖它拼 URL。
+  await TargetHostResolver.init();
+  // 恢复已保存的 Cloudflare 验证 cookie，避免每次启动都重新验证
+  await CloudflareCookieJar.instance.init();
+  // 恢复打码平台配置（自动解 Turnstile 用），未配置时自动降级回 managed 流程
+  await CaptchaSettings.instance.init();
   runApp(const MyApp());
 }
 
@@ -28,6 +43,11 @@ class MyApp extends StatelessWidget {
     return Layout(child: GetMaterialApp(
       title: appName,
       debugShowCheckedModeBanner: false,
+      // 常驻 WebView 桥接层放在 builder 内：此处已有 MaterialApp 提供的
+      // Directionality/Theme，避免把 Stack 包在 GetMaterialApp 外层导致
+      // “No Directionality widget found” 的构建崩溃（会让整个 App 渲染不出来）。
+      builder: (context, child) =>
+          CloudflareBridgeOverlay(child: child ?? const SizedBox.shrink()),
       routes: {
         "/": (context) => const MyHomePage(title: appName),
         "/chapter": (context) =>
@@ -79,15 +99,19 @@ class _MyHomePageState extends State<MyHomePage>
   Widget build(BuildContext context) {
     // 返回键退出
     bool closeOnConfirm() {
+      if (!mounted) return false;
       DateTime now = DateTime.now();
       // 物理键，两次间隔大于4秒, 退出请求无效
       if (currentBackPressTime == null ||
           now.difference(currentBackPressTime!) > const Duration(seconds: 4)) {
         currentBackPressTime = now;
-        Get.showSnackbar(GetSnackBar(
-          message: 'conirmExitApp'.tr,
-          duration: const Duration(seconds: 4),
-        ));
+        // 用当前 BuildContext 的 ScaffoldMessenger，避免 GetX 全局 Overlay 在路由返回时找不到
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('conirmExitApp'.tr),
+            duration: const Duration(seconds: 4),
+          ),
+        );
         return false;
       }
       // 退出请求有效
@@ -211,4 +235,77 @@ class _KeepAliveWrapperState extends State<KeepAliveWrapper>
 
   @override
   bool get wantKeepAlive => widget.keepAlive;
+}
+
+/// 常驻 WebView 桥接层。
+///
+/// 始终挂载一个隐藏的 WebView（保持会话存活），当 [CloudflareBridge.verifying] 为真时
+/// 以全屏验证页形式展现，供用户手动完成 Cloudflare 人机验证。验证通过后该 WebView
+/// 退回隐藏态但仍保持挂载，后续所有 API 请求都通过它取数（共享 TLS 指纹 + cf_clearance）。
+class CloudflareBridgeOverlay extends StatefulWidget {
+  final Widget child;
+  const CloudflareBridgeOverlay({super.key, required this.child});
+
+  @override
+  State<CloudflareBridgeOverlay> createState() => _CloudflareBridgeOverlayState();
+}
+
+class _CloudflareBridgeOverlayState extends State<CloudflareBridgeOverlay> {
+  final _bridge = CloudflareBridge.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _bridge.addListener(() => setState(() {}));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        widget.child,
+        // 常驻 WebView：maintainState 保证隐藏时也保持挂载（会话/cookie 不丢失）。
+        Visibility(
+          visible: _bridge.verifying,
+          maintainState: true,
+          maintainAnimation: true,
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('Cloudflare 安全验证（自动进行，请稍候…）'),
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: '取消',
+                onPressed: () => _bridge.cancel(),
+              ),
+            ),
+            body: WebViewWidget(controller: _bridge.controller),
+          ),
+        ),
+        // 验证通过后的状态小条：让用户无需看日志即可确认桥接是否在工作。
+        if (_bridge.ready)
+          Positioned(
+            left: 8,
+            right: 8,
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _bridge.lastError == null
+                    ? Colors.green.withOpacity(0.92)
+                    : Colors.orange.withOpacity(0.92),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _bridge.lastError == null
+                    ? '☁ Cloudflare 已通过 · 数据经桥接 WebView 加载'
+                        '${_bridge.lastFetchLen != null ? '（上次 ${_bridge.lastFetchLen} 字节）' : ''}'
+                    : '☁ 桥接异常：${_bridge.lastError}',
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

@@ -99,10 +99,10 @@ class _ComicHistory extends State<ComicHistory> {
           title: item.title,
           image: item.image),
     );
-    await Navigator.of(context).push(MaterialPageRoute(builder: (content) => nextPage));
+    await Get.to(() => nextPage, transition: Transition.zoom);
+    // await Navigator.of(context).push(MaterialPageRoute(builder: (content) => nextPage));
     /// 回来之后同步下数据
     syncData();
-    // Navigator.pushNamed(context, '/detail', arguments: item);
   }
 
   @override

@@ -2,6 +2,10 @@ import 'package:comic/widget/animation/animation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../models/setting.dart';
+import '../../utils/cloudflare.dart';
+import '../../utils/cloudflare_solver.dart';
+import '../../utils/cloudflare_bridge.dart';
+import '../../utils/turnstile_solver.dart';
 
 class SettingPage extends StatefulWidget {
   const SettingPage({super.key});
@@ -12,6 +16,136 @@ class SettingPage extends StatefulWidget {
 
 class _Setting extends State<SettingPage> {
   final SetController set = Get.find();
+
+  /// 是否已导入可用的 cf_clearance（用于 UI 状态展示）。
+  bool _hasClearance = false;
+
+  /// 打码平台配置（自动解 Turnstile）。
+  bool _captchaEnabled = false;
+  String _captchaProvider = '2captcha';
+  final TextEditingController _captchaKeyController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshClearance();
+    _captchaEnabled = CaptchaSettings.instance.enabled;
+    _captchaProvider = CaptchaSettings.instance.provider;
+    _captchaKeyController.text = CaptchaSettings.instance.apiKey;
+  }
+
+  void _refreshClearance() {
+    setState(() {
+      _hasClearance =
+          CloudflareCookieJar.instance.hasClearanceFor(TargetHostResolver.host);
+    });
+  }
+
+  /// 从真实浏览器导入 cf_clearance 的旁路：
+  /// WebView 在该 IDN 域名下无法完成 Cloudflare Turnstile（渲染进程崩溃），
+  /// 因此允许用户在桌面浏览器通过验证后，把 cookie 复制进来直接绕过。
+  Future<void> _importCloudflareCookie() async {
+    final controller = TextEditingController();
+    final uaController = TextEditingController(
+      text: CloudflareCookieJar.instance.userAgentFor(TargetHostResolver.host) ??
+          kBrowserUserAgent,
+    );
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('导入 cf_clearance 绕过验证'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '在桌面浏览器打开站点并完成人机验证，然后：\n'
+                '开发者工具 → Application/Storage → Cookies → 复制 cf_clearance 的值\n'
+                '（也可直接粘贴整段 Cookie 头，如 cf_clearance=xxx; __cf_bm=yyy）。\n\n'
+                '注意：cookie 与浏览器的 User-Agent 绑定，请同时粘贴导出浏览器'
+                '的 UA（F12 → 控制台输入 navigator.userAgent 回车），否则可能被重新挑战。',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'cf_clearance / Cookie',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                maxLines: 3,
+                autofocus: true,
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: uaController,
+                decoration: const InputDecoration(
+                  labelText: '浏览器 User-Agent（建议一并粘贴）',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('导入'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+    final raw = controller.text.trim();
+    if (raw.isEmpty) {
+      Get.snackbar('提示', '未输入任何内容');
+      return;
+    }
+
+    final cookies = CloudflareCookieJar.parseRawCookie(raw);
+    if (cookies.isEmpty) {
+      Get.snackbar('注意', '未能解析出任何 cookie');
+      return;
+    }
+
+    // 1) 持久化到 cookie jar（供图片请求等 Dart 侧复用）
+    await CloudflareCookieJar.instance
+        .importFromRawCookie(TargetHostResolver.host, raw);
+    // 2) 注入常驻桥接 WebView（同步 UA），使其无需走 Turnstile 即可直接桥接取数
+    await CloudflareBridge.instance.injectImport(TargetHostResolver.host,
+        cookies,
+        userAgent: uaController.text);
+    // 3) 导入后清除“验证失败 host”记录，让下一个请求重新尝试（携带导入的 cookie）。
+    CloudflareSolver.clearFailedHosts();
+    _refreshClearance();
+
+    if (!cookies.containsKey('cf_clearance')) {
+      Get.snackbar('注意', '已保存 cookie，但未发现 cf_clearance 字段，可能无法绕过');
+      return;
+    }
+
+    // 4) 立即经桥接 WebView 实测一次首页，确认导入的 cookie 真的可用
+    //    （过期的 cookie 会被 Cloudflare 重新挑战，fetchHtml 会返回 null 并
+    //    自动把桥接降级回未就绪态）。避免用户导入后还要自己猜有没有生效。
+    Get.snackbar('导入中', '正在验证导入的 cf_clearance 是否有效…');
+    final probe = await CloudflareBridge.instance
+        .fetchHtml('https://${TargetHostResolver.host}/');
+    if (probe != null && probe.isNotEmpty) {
+      Get.snackbar('成功', 'cf_clearance 验证通过！数据将经桥接 WebView 加载');
+    } else {
+      Get.snackbar('导入无效',
+          'cookie 未通过校验：可能已过期，或手机与浏览器不在同一网络（IP 绑定），或 UA 不一致');
+    }
+  }
+
 
   /// 设置语言
   void setLang(String str) {
@@ -129,6 +263,103 @@ class _Setting extends State<SettingPage> {
               ),
             ),
           ]),
+          const Divider(),
+          // ===== 打码平台自动解 Turnstile =====
+          // 目标站是 IDN 域名，纯 WebView 无法完成 Cloudflare 交互式 Turnstile
+          // （渲染进程崩溃）。配置打码平台 API Key 后，验证流程会在 managed
+          // 挑战卡住时自动调用平台解出 token 并回填，免手动导入、全自动。
+          ExpansionTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: const Text('自动过验证（打码平台）'),
+            subtitle: Text(_captchaEnabled
+                ? '已启用 · ${_captchaProvider == 'anticaptcha' ? 'Anti-Captcha' : '2Captcha'}'
+                : '未启用，验证卡住时需手动导入 cookie'),
+            initiallyExpanded: _captchaEnabled,
+            children: [
+              SwitchListTile(
+                title: const Text('启用自动解 Turnstile'),
+                subtitle: const Text('验证卡在交互式验证时，自动调用打码平台解出'
+                    '（需付费 API Key）'),
+                value: _captchaEnabled,
+                onChanged: (v) async {
+                  setState(() => _captchaEnabled = v);
+                  await CaptchaSettings.instance
+                      .set(enabled: v, apiKey: _captchaKeyController.text);
+                  CloudflareSolver.clearFailedHosts();
+                },
+              ),
+              ListTile(
+                title: const Text('服务商'),
+                trailing: DropdownButton<String>(
+                  value: _captchaProvider,
+                  items: const [
+                    DropdownMenuItem(
+                        value: '2captcha', child: Text('2Captcha')),
+                    DropdownMenuItem(
+                        value: 'anticaptcha', child: Text('Anti-Captcha')),
+                  ],
+                  onChanged: (v) async {
+                    if (v == null) return;
+                    setState(() => _captchaProvider = v!);
+                    await CaptchaSettings.instance.set(provider: v!);
+                  },
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: TextField(
+                  controller: _captchaKeyController,
+                  decoration: const InputDecoration(
+                    labelText: 'API Key',
+                    hintText: '粘贴打码平台的 clientKey',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  obscureText: true,
+                  onChanged: (v) async {
+                    await CaptchaSettings.instance.set(apiKey: v.trim());
+                  },
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  '说明：Cloudflare 在该 IDN 域名下会让 WebView 的 Turnstile '
+                  '崩溃，因此「自动过」只能依赖打码平台。启用后无需再手动导入，'
+                  '验证将自动完成。未配置 Key 时仍走原有的 managed 流程/手动导入。',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+          ListTile(
+            leading: const Icon(Icons.verified_user_outlined),
+            title: const Text('清除 Cloudflare 验证缓存'),
+            subtitle: const Text('验证失效或异常时，可清除后重新验证'),
+            onTap: () async {
+              await CloudflareCookieJar.instance.clear();
+              // 同步重置常驻桥接 WebView（含清空平台 cookie 仓库），
+              // 否则旧的 cf_clearance 仍残留在 WebView 里，“清除”实际无效。
+              await CloudflareBridge.instance.reset();
+              CloudflareSolver.clearFailedHosts();
+              _refreshClearance();
+              Get.snackbar('提示', 'Cloudflare 验证缓存已清除');
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              _hasClearance
+                  ? Icons.check_circle_outline
+                  : Icons.login_outlined,
+              color: _hasClearance ? Colors.green : null,
+            ),
+            title: const Text('导入 cf_clearance 绕过验证'),
+            subtitle: Text(_hasClearance
+                ? '已导入，后续请求将跳过 WebView 验证'
+                : 'WebView 无法完成验证时，从浏览器复制 cookie 绕过'),
+            onTap: _importCloudflareCookie,
+          ),
         ],
       ),
     );

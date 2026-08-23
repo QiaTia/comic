@@ -42,7 +42,7 @@ class ImageUtil {
       /// 保存网络图片
       CachedNetworkImage image = CachedNetworkImage(
         imageUrl: imageUrl,
-        httpHeaders: imageHeader,
+        httpHeaders: imageHeadersFor(imageUrl),
       );
       BaseCacheManager manager = image.cacheManager ?? DefaultCacheManager();
       Map<String, String> headers = image.httpHeaders ?? {};

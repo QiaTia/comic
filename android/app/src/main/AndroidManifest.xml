@@ -3,6 +3,7 @@
         android:label="Comic"
         android:name="${applicationName}"
         android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true"
         android:icon="@drawable/ic_launcher">
         <activity
             android:name=".MainActivity"

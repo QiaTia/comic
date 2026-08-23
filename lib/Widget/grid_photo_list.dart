@@ -57,7 +57,7 @@ class _GridPhotoItem extends StatelessWidget {
         tag: item.image, 
         child: CachedNetworkImage(
           imageUrl: item.image,
-          httpHeaders: imageHeader,
+          httpHeaders: imageHeadersFor(item.image),
           fit: BoxFit.cover,
           progressIndicatorBuilder: (context, url, downloadProgress) =>
               CircularProgressIndicator(value: downloadProgress.progress),

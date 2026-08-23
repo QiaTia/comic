@@ -23,6 +23,8 @@ class _ComicChapter extends State<ComicChapter> {
   int currentPage = 1;
   int currentTag = 0;
   bool isLoading = true;
+  /// 本次失败
+  bool isFail = false;
   List<ChapterItemProp> list = [];
 
   void setChapterData(ChapterProp result) {
@@ -42,14 +44,20 @@ class _ComicChapter extends State<ComicChapter> {
     });
     getChapter();
   }
-
+  /// 访问数据拿取资源
   void getChapter() {
     setState(() {
       isLoading = true;
     });
-    apiServer.getChapter(widget.id, currentPage, currentTag).then((result) {
-      setChapterData(result);
-    });
+    apiServer.getChapter(widget.id, currentPage, currentTag)
+      .then((result) {
+        setChapterData(result);
+      }).catchError((err) {
+        setState(() {
+          isFail = true;
+          isLoading = false;
+        });
+      });
   }
 
   @override
@@ -75,7 +83,15 @@ class _ComicChapter extends State<ComicChapter> {
                   Text("loading".tr)
                 ]),
               )
-            : Column(
+            : isFail ?  Center(child: Column(children:[
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 80),
+                child: Icon(Icons.error_sharp),
+              ),
+              ElevatedButton(onPressed: () {
+                getChapter();
+              }, child: const Text("Re Try"))
+            ])) : Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(8),

@@ -47,6 +47,9 @@ class _ComicDetail extends State<ComicDetail> {
   bool isAppBar = true;
   // 当前页数
   RxInt currentPage = 0.obs;
+  // 图片缓存中
+  RxBool isImagePreloading = false.obs;
+  // 图片缓存完成
   RxBool isImagePreloaded = false.obs;
   final ScrollOffsetController _controller = ScrollOffsetController();
   final ItemScrollController itemScrollController = ItemScrollController();
@@ -92,11 +95,16 @@ class _ComicDetail extends State<ComicDetail> {
   }
 
   void onPreload() async {
+    if (isImagePreloading.value || isImagePreloaded.value) {
+      Get.snackbar(title, "任务已经在进行中啦——");
+      return;
+    }
     final list = _photos.map((el) => el.url).toList();
     if (list.isEmpty) {
       Get.snackbar(title, "请等待⌛️图片列表完成 !");
       return;
     }
+    isImagePreloading.value = true;
     await _preloader.preloadImages(list, context);
     isImagePreloaded.value = true;
   }
@@ -199,6 +207,7 @@ class _ComicDetail extends State<ComicDetail> {
                         tag: widget.options.image,
                         child: CachedNetworkImage(
                           imageUrl: widget.options.image,
+                          httpHeaders: imageHeadersFor(widget.options.image),
                           fit: BoxFit.cover,),
                       ),
                       const Padding(
@@ -345,13 +354,15 @@ class __PhotoListWidget extends State<_PhotoList> {
         scrollOffsetController: widget.controller,
         itemPositionsListener: itemPositionsListener,
         scrollOffsetListener: scrollOffsetListener,
+        addAutomaticKeepAlives: true,
         /// 预加载一页半的内容
         minCacheExtent: MediaQuery.of(context).size.height * 1.4,
         // restorationId: widget.rid,
         itemBuilder: (context, index) {
+          var next = index + 1;
           // 预先缓存下一张内容
-          if (_list[index + 1].title != loadingTag) {
-            _preloader.preloadImage(_list[index + 1].url, context);
+          if (_list.length < next && _list[next].title != loadingTag) {
+            _preloader.preloadImage(_list[next].url, context);
           }
           //如果到了表尾
           else if (_list[index].title == loadingTag) {
@@ -386,13 +397,19 @@ class __PhotoListWidget extends State<_PhotoList> {
             onTapDown: widget.onTapDown,
             onLongPress: () async {
               // 点击查看大图
-              int result = await Get.to(FadeRoute(page: GalleryList(
-                  list: widget.list.map((e) => e.url).toList(),
-                  index: index,
-                )));
-              // int result = await Navigator.of(context).push();
-              // 同步查看位置
-              widget.itemScrollController?.jumpTo(index: result);
+              // 注意：FadeRoute 是 Route 对象，GetX 的 Get.to() 只接受
+              // Widget/页面构造函数，传 Route 会抛
+              // "Unexpected format, you can only use widgets and widget
+              // functions here"（长按无响应的根因）。必须走 Navigator.push。
+              final result = await Navigator.of(context)
+                  .push<int>(FadeRoute(page: GalleryList(
+                list: widget.list.map((e) => e.url).toList(),
+                index: index,
+              )));
+              // 同步查看位置（大图页 pop 返回当前索引；系统返回键等返回 null）
+              if (result != null && result != index) {
+                widget.itemScrollController?.jumpTo(index: result);
+              }
             },
           );
         });
@@ -424,7 +441,7 @@ class _ListPhotoItem extends StatelessWidget {
             child: Center(
               child: CachedNetworkImage(
                 imageUrl: item.url,
-                httpHeaders: imageHeader,
+                httpHeaders: imageHeadersFor(item.url),
                 fit: BoxFit.fitWidth,
                 progressIndicatorBuilder: (context, url, downloadProgress) =>
                     CircularProgressIndicator(value: downloadProgress.progress),

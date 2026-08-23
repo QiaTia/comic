@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 class WhiteData extends StatelessWidget {
-  final Color color = Color(0xFFAAAAAA);
+  final Color color = const Color(0xFFAAAAAA);
   @override
   Widget build(BuildContext context) {
     return Center(
