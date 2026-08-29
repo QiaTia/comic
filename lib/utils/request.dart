@@ -263,8 +263,8 @@ class _HttpService extends GetConnect {
     // 全部失败：标记失败防止对每个请求重复弹 WebView 循环。
     CloudflareSolver.markFailed(uri.host);
     Get.snackbar(
-      'Cloudflare 验证失败',
-      '请在「设置 → 导入 cf_clearance」从浏览器复制 cookie 绕过',
+      'cfVerifyFailed'.tr,
+      'cfVerifyFailedBody'.tr,
       duration: const Duration(seconds: 5),
     );
     throw CloudflareVerificationFailedException();

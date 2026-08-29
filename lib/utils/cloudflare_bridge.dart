@@ -33,6 +33,17 @@ class CloudflareBridge extends ChangeNotifier {
   WebViewController? _controller;
   bool _verifying = false;
   bool _ready = false;
+
+  /// 验证页是否显示。与 [_verifying]（验证流程是否在跑）分离：
+  /// 静默验证（启动预热/静默复活）时流程在跑但不弹 UI，
+  /// 避免每次打开 App 都闪现验证页。
+  bool _uiVisible = false;
+
+  /// 本次 solve 是否允许弹验证页（由 solve 的 showUi 参数决定）。
+  bool _solveShowUi = true;
+
+  /// 是否已应用「原生 UA 去 wv 标记」。
+  bool _nativeUaApplied = false;
   Uri? _pendingUri;
 
   final Map<String, String> _cookies = {};
@@ -64,8 +75,17 @@ class CloudflareBridge extends ChangeNotifier {
   /// 进行中的 solve（含重试循环整体），并发请求共享其结果。
   Future<CloudflareSolveResult?>? _activeSolve;
 
+  /// 闲置瘦身定时器：ready 后 60s 无取数则让 WebView 加载空白页，
+  /// 释放已加载页面的 DOM/图片渲染内存（~100MB+）。cookie 存于平台级
+  /// 共享仓库不受影响，下次取数前会重新导航到目标域。
+  Timer? _idleTimer;
+  bool _idleSlimmed = false;
+
   bool get verifying => _verifying;
   bool get ready => _ready;
+
+  /// 验证页是否展示（仅非静默验证时为 true）。
+  bool get uiVisible => _uiVisible;
 
   /// 最近一次桥接取数结果（供 UI 状态展示）：成功字节数或失败原因。
   int? lastFetchLen;
@@ -78,24 +98,15 @@ class CloudflareBridge extends ChangeNotifier {
   }
 
   WebViewController _build() {
-    // 关键：不设置自定义 UA，使用 WebView 真实默认 UA（移动 Chrome）。
-    // 此前伪装桌面 Chrome/120 UA，与 WebView 实际的 TLS/Client-Hints 指纹不符，
-    // Cloudflare 会把 managed 挑战升级为交互式 Turnstile——而 Turnstile 小组件
-    // 在 IDN 域名下会因 postMessage origin 不匹配崩溃（验证永远过不去的根因）。
-    // 真实浏览器实测：该站的 managed 挑战对指纹一致的客户端免交互自动通过。
+    // 关键：不在构造时写死 UA。硬编码 Chrome/124 在新设备（内核 13x）上
+    // 与引擎实际发出的 sec-ch-ua Client-Hints 版本不一致，本身就是指纹
+    // 异常特征。改为验证前用 [_applyNativeUa] 动态取「原生 UA 去 wv 标记」。
     final c = WebViewController(
       // Cloudflare Turnstile 完成无感验证需要媒体设备/WebRTC 权限，
       // 否则报 "No available adapters" 导致挑战永远无法通过。全部授权。
       onPermissionRequest: (request) => request.grant(),
     )
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      // UA 伪装为真实 Chrome（去掉 Android WebView 的 "; wv)" 标记）：
-      // Turnstile 对带 wv 标记的 UA 直接判为嵌入式 WebView，给最难挑战路径
-      // （真机实测 3×90s 三轮 managed 挑战全败）。去掉 wv 后与真实 Chrome
-      // 一致，配合第三方 Cookie 开启，通过率与移动浏览器相同。
-      ..setUserAgent(
-          'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like '
-          'Gecko) Chrome/124.0.0.0 Mobile Safari/537.36')
       // WebView 控制台日志转发到 [CF] 日志流：Turnstile 的异常
       // （如 SecurityError）会以 console error 形式出现，用于诊断验证失败原因。
       ..setOnConsoleMessage((m) => cfLog('[WebView] ${m.level}: ${m.message}'))
@@ -105,6 +116,35 @@ class CloudflareBridge extends ChangeNotifier {
       );
     _hardenAndroid(c);
     return c;
+  }
+
+  /// 应用「原生 UA 去 WebView 标记」：
+  /// 1. 恢复默认 UA → 加载 about:blank → 读 navigator.userAgent；
+  /// 2. 剥掉 "; wv" 嵌入式标记（Turnstile 据此判为 WebView 给最难路径）；
+  /// 3. 回设为 WebView UA。版本号/设备信息全部真实，与 Client-Hints 一致。
+  /// 失败时静默保持现状（不影响主流程）。
+  Future<void> _applyNativeUa() async {
+    if (_nativeUaApplied) return;
+    try {
+      await controller.setUserAgent(null); // 恢复系统默认 UA
+      await controller.loadRequest(Uri.parse('about:blank'));
+      await Future.delayed(const Duration(milliseconds: 400));
+      final raw = await _readWebViewUserAgent();
+      if (raw == null || raw.isEmpty || !raw.contains('Mozilla')) return;
+      // 仅剥 wv 标记，其余（真实 Chrome 版本、设备型号）保持原生
+      var cleaned = raw.replaceAll(RegExp(r';\s*wv(?=\))'), '');
+      cleaned = cleaned.replaceAll(RegExp(r';\s*wv\s*$'), '');
+      if (cleaned == raw) {
+        // 无 wv 标记：原生 UA 本身就干净，直接用
+        cfLog('原生 UA 无 wv 标记，直接采用: $cleaned');
+      } else {
+        cfLog('原生 UA 已剥 wv 标记: $cleaned');
+      }
+      await controller.setUserAgent(cleaned);
+      _nativeUaApplied = true;
+    } catch (e) {
+      cfLog('应用原生 UA 失败（保持现状）: $e');
+    }
   }
 
   /// Android 专属强化：把 WebView 行为对齐真实 Chrome。
@@ -150,7 +190,10 @@ class CloudflareBridge extends ChangeNotifier {
   ///   WebView 里注入 cookie 并取数验证，成功则不弹验证页（跨重启持久化）；
   /// - 正在验证中：等待同一次验证结果（并发请求共享）；
   /// - 否则：展示验证页、加载目标 URL、轮询直到挑战消失，90s 兜底超时。
-  Future<CloudflareSolveResult?> solve(Uri uri) async {
+  ///
+  /// [showUi] 为 false 时全程静默（不弹验证页）：用于启动后台预热，
+  /// managed 挑战自动通过则用户无感知；失败则由用户手动重试时再弹 UI。
+  Future<CloudflareSolveResult?> solve(Uri uri, {bool showUi = true}) async {
     if (_ready) {
       await _readCookies(uri);
       return CloudflareSolveResult(
@@ -177,11 +220,14 @@ class CloudflareBridge extends ChangeNotifier {
       cfLog('本地 cf_clearance 失效，已恢复默认 UA 走自动验证');
     }
 
+    // 走自动验证前确保 UA 为「原生去 wv」——与设备内核 Client-Hints 一致
+    await _applyNativeUa();
     _pendingUri = uri;
     // 并发保护：重试循环的两轮间隙 _verifying=false，其他请求此时调
     // solve 会开第二个循环、状态互相干扰——共享同一个进行中的 solve。
     final active = _activeSolve;
     if (active != null) return active;
+    _solveShowUi = showUi;
     final completer = Completer<CloudflareSolveResult?>();
     _activeSolve = completer.future;
     try {
@@ -202,6 +248,8 @@ class CloudflareBridge extends ChangeNotifier {
       Uri uri, Completer<CloudflareSolveResult?> completer) async {
     _userCancelled = false;
     _verifying = true;
+    // 仅非静默验证才展示验证页（启动预热全程隐藏，不闪 UI）。
+    _uiVisible = _solveShowUi;
     notifyListeners();
     for (var round = 1; round <= 3; round++) {
       if (_userCancelled) {
@@ -211,6 +259,7 @@ class CloudflareBridge extends ChangeNotifier {
       final res = await _solveOnce(uri, round);
       if (res != null) {
         _verifying = false;
+        _uiVisible = false;
         notifyListeners();
         return res;
       }
@@ -220,6 +269,7 @@ class CloudflareBridge extends ChangeNotifier {
       }
     }
     _verifying = false;
+    _uiVisible = false;
     notifyListeners();
     cfLog('3 轮验证均未通过');
     return null;
@@ -330,6 +380,34 @@ class CloudflareBridge extends ChangeNotifier {
     return null;
   }
 
+  /// App 启动后台预热：隐藏 WebView 尝试静默通过 managed 挑战。
+  ///
+  /// WebView 在控制器创建后即可无头运行（不需要挂进 Widget 树），
+  /// 成功则首页请求直接就绪、用户全程无感知；失败不弹任何 UI，
+  /// 由用户手动重试时再走带 UI 的验证。
+  Future<void> prewarm(Uri uri) async {
+    if (_ready || _activeSolve != null) return;
+    try {
+      final res = await solve(uri, showUi: false);
+      cfLog('启动后台预热${res != null ? '成功' : '未通过（等待用户手动重试）'}');
+    } catch (e) {
+      cfLog('启动后台预热异常: $e');
+    }
+  }
+
+  /// 重置闲置瘦身倒计时：每次取数后 60s 无新请求才真正瘦身。
+  void _scheduleIdleSlim() {
+    _idleTimer?.cancel();
+    _idleTimer = Timer(const Duration(seconds: 60), () {
+      if (!_ready || _verifying) return;
+      try {
+        controller.loadRequest(Uri.parse('about:blank'));
+        _idleSlimmed = true;
+        cfLog('闲置 60s，WebView 已瘦身（加载空白页释放渲染内存）');
+      } catch (_) {}
+    });
+  }
+
   void _startPoll() {
     _pollTimer?.cancel();
     _pollTimer = Timer.periodic(
@@ -434,7 +512,18 @@ class CloudflareBridge extends ChangeNotifier {
   /// 挑战），加载完成后读取渲染 DOM。失败/超时/会话过期时返回 null。
   Future<String?> fetchHtml(String url) async {
     if (_controller == null || !_ready) return null;
+    _scheduleIdleSlim();
     final uri = Uri.parse(url);
+    // 闲置瘦身会导航到 about:blank，破坏 fetch 的同源前提：
+    // 先导航回目标域根路径（cookie 在平台仓库，会话不受影响）。
+    if (_idleSlimmed) {
+      _idleSlimmed = false;
+      try {
+        await controller
+            .loadRequest(Uri.parse('https://${uri.host}/'))
+            .timeout(const Duration(seconds: 15));
+      } catch (_) {}
+    }
     String? html;
     if (!_fetchDisabled) {
       html = await _fetchViaJs(uri);
@@ -797,6 +886,7 @@ class CloudflareBridge extends ChangeNotifier {
     _pollTimer?.cancel();
     _solveTimeoutTimer?.cancel();
     _verifying = false;
+    _uiVisible = false;
     notifyListeners();
   }
 
@@ -813,12 +903,16 @@ class CloudflareBridge extends ChangeNotifier {
     _pollTimer?.cancel();
     _solveTimeoutTimer?.cancel();
     _verifying = false;
+    _uiVisible = false;
     _ready = false;
+    _nativeUaApplied = false;
     _cookies.clear();
     lastError = null;
     lastFetchLen = null;
     _fetchChallengeStreak = 0;
     _fetchDisabled = false;
+    _idleTimer?.cancel();
+    _idleSlimmed = false;
     try {
       await WebViewCookieManager().clearCookies();
       // 同时恢复默认 UA：导入旁路可能设置了桌面 UA，残留会让后续

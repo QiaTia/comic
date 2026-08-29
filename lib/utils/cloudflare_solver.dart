@@ -79,9 +79,11 @@ class CloudflareSolver {
         result = await CloudflareBridge.instance.solve(uri);
       }
       if (result == null) {
-        // 用户取消或验证未产出结果：记入冷却 + 失败 host，防止死循环
+        // 用户取消或验证未产出结果：仅记 10s 冷却防机枪式弹窗。
+        // 不再加入 _failedHosts（会话级永久封禁）——超时/挂起的验证
+        // 在下次重试时可能通过（Turnstile 行为不稳定），永久封禁会让
+        // 用户手动重试永远进不了验证页（真机踩坑）。
         _recentFail[host] = DateTime.now().millisecondsSinceEpoch;
-        _failedHosts.add(host);
       } else {
         _recentFail.remove(host);
         _failedHosts.remove(host);

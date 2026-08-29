@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:comic/view/info/about.dart';
 import 'package:comic/view/info/setting.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +34,11 @@ void main() async {
   await CloudflareCookieJar.instance.init();
   // 恢复打码平台配置（自动解 Turnstile 用），未配置时自动降级回 managed 流程
   await CaptchaSettings.instance.init();
+  // 启动后台预热：隐藏 WebView 静默尝试通过 managed 挑战，
+  // 成功则首页数据直接加载（无验证页闪现）；失败不弹 UI，
+  // 由用户手动重试时再走带 UI 的验证。
+  unawaited(CloudflareBridge.instance
+      .prewarm(Uri.parse('https://${TargetHostResolver.host}/')));
   runApp(const MyApp());
 }
 
@@ -256,7 +263,29 @@ class _CloudflareBridgeOverlayState extends State<CloudflareBridgeOverlay> {
   @override
   void initState() {
     super.initState();
-    _bridge.addListener(() => setState(() {}));
+    // 只为验证页的显隐注册监听（低频）；状态小条用 AnimatedBuilder 局部重建，
+    // 避免每次 bridge notifyListeners 都重建整个 Overlay Stack。
+    _bridge.addListener(_onBridgeChanged);
+  }
+
+  void _onBridgeChanged() {
+    // 只有验证页显隐变化才需要重建 Stack（低频）。
+    // bridge 取数过程中的 notify（lastFetchLen 等）只影响状态小条，
+    // 由 AnimatedBuilder 局部消费，这里直接忽略。
+    // 用 uiVisible（而非 verifying）：启动预热是静默验证（verifying=true
+    // 但不弹 UI），不能让验证页闪现。
+    if (!mounted) return;
+    if (_lastUiVisible == _bridge.uiVisible) return;
+    _lastUiVisible = _bridge.uiVisible;
+    setState(() {});
+  }
+
+  bool _lastUiVisible = false;
+
+  @override
+  void dispose() {
+    _bridge.removeListener(_onBridgeChanged);
+    super.dispose();
   }
 
   @override
@@ -264,47 +293,60 @@ class _CloudflareBridgeOverlayState extends State<CloudflareBridgeOverlay> {
     return Stack(
       children: [
         widget.child,
-        // 常驻 WebView：maintainState 保证隐藏时也保持挂载（会话/cookie 不丢失）。
+        // 常驻 WebView：仅非静默验证（用户手动重试/手动验证）时展示；
+        // 启动预热等静默验证在后台无头运行，不闪 UI。
+        // maintainState 保证隐藏时也保持挂载（会话/cookie 不丢失）。
         Visibility(
-          visible: _bridge.verifying,
+          visible: _bridge.uiVisible,
           maintainState: true,
           maintainAnimation: true,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Cloudflare 安全验证（自动进行，请稍候…）'),
+              title: Text('cfVerifyTitle'.tr),
               leading: IconButton(
                 icon: const Icon(Icons.close),
-                tooltip: '取消',
+                tooltip: 'cancel'.tr,
                 onPressed: () => _bridge.cancel(),
               ),
             ),
             body: WebViewWidget(controller: _bridge.controller),
           ),
         ),
-        // 验证通过后的状态小条：让用户无需看日志即可确认桥接是否在工作。
-        if (_bridge.ready)
-          Positioned(
-            left: 8,
-            right: 8,
-            bottom: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _bridge.lastError == null
-                    ? Colors.green.withOpacity(0.92)
-                    : Colors.orange.withOpacity(0.92),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                _bridge.lastError == null
-                    ? '☁ Cloudflare 已通过 · 数据经桥接 WebView 加载'
-                        '${_bridge.lastFetchLen != null ? '（上次 ${_bridge.lastFetchLen} 字节）' : ''}'
-                    : '☁ 桥接异常：${_bridge.lastError}',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ),
+        // 验证通过后的状态小条：AnimatedBuilder 只重建这个小区域，
+        // bridge 高频 notify（取数字节数等）不再触发整页 rebuild。
+        Positioned(
+          left: 8,
+          right: 8,
+          bottom: 8,
+          child: AnimatedBuilder(
+            animation: _bridge,
+            builder: (context, _) {
+              if (!_bridge.ready) return const SizedBox.shrink();
+              return Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _bridge.lastError == null
+                      ? Colors.green.withOpacity(0.92)
+                      : Colors.orange.withOpacity(0.92),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _bridge.lastError == null
+                      ? 'cfReady'.tr +
+                          (_bridge.lastFetchLen != null
+                              ? 'cfLastBytes'
+                                  .trParams({'n': '${_bridge.lastFetchLen}'})
+                              : '')
+                      : 'cfBridgeError'
+                          .trParams({'e': '${_bridge.lastError}'}),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              );
+            },
           ),
+        ),
       ],
     );
   }

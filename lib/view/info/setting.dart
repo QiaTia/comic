@@ -52,26 +52,22 @@ class _Setting extends State<SettingPage> {
     );
     final ok = await Get.dialog<bool>(
       AlertDialog(
-        title: const Text('导入 cf_clearance 绕过验证'),
+        title: Text('cfImport'.tr),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '在桌面浏览器打开站点并完成人机验证，然后：\n'
-                '开发者工具 → Application/Storage → Cookies → 复制 cf_clearance 的值\n'
-                '（也可直接粘贴整段 Cookie 头，如 cf_clearance=xxx; __cf_bm=yyy）。\n\n'
-                '注意：cookie 与浏览器的 User-Agent 绑定，请同时粘贴导出浏览器'
-                '的 UA（F12 → 控制台输入 navigator.userAgent 回车），否则可能被重新挑战。',
-                style: TextStyle(fontSize: 12),
+              Text(
+                'cfImportHelp'.tr,
+                style: const TextStyle(fontSize: 12),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: controller,
-                decoration: const InputDecoration(
-                  labelText: 'cf_clearance / Cookie',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: 'cfImportCookieLabel'.tr,
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
                 maxLines: 3,
@@ -80,9 +76,9 @@ class _Setting extends State<SettingPage> {
               const SizedBox(height: 8),
               TextField(
                 controller: uaController,
-                decoration: const InputDecoration(
-                  labelText: '浏览器 User-Agent（建议一并粘贴）',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: 'cfImportUaLabel'.tr,
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
                 maxLines: 2,
@@ -93,11 +89,11 @@ class _Setting extends State<SettingPage> {
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
-            child: const Text('取消'),
+            child: Text('cancel'.tr),
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('导入'),
+            child: Text('cfImportConfirm'.tr),
           ),
         ],
       ),
@@ -106,13 +102,13 @@ class _Setting extends State<SettingPage> {
     if (ok != true) return;
     final raw = controller.text.trim();
     if (raw.isEmpty) {
-      Get.snackbar('提示', '未输入任何内容');
+      Get.snackbar('tip'.tr, 'cfImportEmpty'.tr);
       return;
     }
 
     final cookies = CloudflareCookieJar.parseRawCookie(raw);
     if (cookies.isEmpty) {
-      Get.snackbar('注意', '未能解析出任何 cookie');
+      Get.snackbar('notice'.tr, 'cfImportNoCookie'.tr);
       return;
     }
 
@@ -128,21 +124,20 @@ class _Setting extends State<SettingPage> {
     _refreshClearance();
 
     if (!cookies.containsKey('cf_clearance')) {
-      Get.snackbar('注意', '已保存 cookie，但未发现 cf_clearance 字段，可能无法绕过');
+      Get.snackbar('notice'.tr, 'cfImportNoClearance'.tr);
       return;
     }
 
     // 4) 立即经桥接 WebView 实测一次首页，确认导入的 cookie 真的可用
     //    （过期的 cookie 会被 Cloudflare 重新挑战，fetchHtml 会返回 null 并
     //    自动把桥接降级回未就绪态）。避免用户导入后还要自己猜有没有生效。
-    Get.snackbar('导入中', '正在验证导入的 cf_clearance 是否有效…');
+    Get.snackbar('importing'.tr, 'cfImportVerifyingBody'.tr);
     final probe = await CloudflareBridge.instance
         .fetchHtml('https://${TargetHostResolver.host}/');
     if (probe != null && probe.isNotEmpty) {
-      Get.snackbar('成功', 'cf_clearance 验证通过！数据将经桥接 WebView 加载');
+      Get.snackbar('success'.tr, 'cfImportOkBody'.tr);
     } else {
-      Get.snackbar('导入无效',
-          'cookie 未通过校验：可能已过期，或手机与浏览器不在同一网络（IP 绑定），或 UA 不一致');
+      Get.snackbar('invalidImport'.tr, 'cfImportBadBody'.tr);
     }
   }
 
@@ -270,16 +265,19 @@ class _Setting extends State<SettingPage> {
           // 挑战卡住时自动调用平台解出 token 并回填，免手动导入、全自动。
           ExpansionTile(
             leading: const Icon(Icons.auto_awesome_outlined),
-            title: const Text('自动过验证（打码平台）'),
+            title: Text('cfAutoSolve'.tr),
             subtitle: Text(_captchaEnabled
-                ? '已启用 · ${_captchaProvider == 'anticaptcha' ? 'Anti-Captcha' : '2Captcha'}'
-                : '未启用，验证卡住时需手动导入 cookie'),
+                ? 'cfAutoSolveOn'.trParams({
+                    'p': _captchaProvider == 'anticaptcha'
+                        ? 'Anti-Captcha'
+                        : '2Captcha'
+                  })
+                : 'cfAutoSolveOff'.tr),
             initiallyExpanded: _captchaEnabled,
             children: [
               SwitchListTile(
-                title: const Text('启用自动解 Turnstile'),
-                subtitle: const Text('验证卡在交互式验证时，自动调用打码平台解出'
-                    '（需付费 API Key）'),
+                title: Text('cfAutoSolveEnable'.tr),
+                subtitle: Text('cfAutoSolveEnableSub'.tr),
                 value: _captchaEnabled,
                 onChanged: (v) async {
                   setState(() => _captchaEnabled = v);
@@ -289,7 +287,7 @@ class _Setting extends State<SettingPage> {
                 },
               ),
               ListTile(
-                title: const Text('服务商'),
+                title: Text('cfProvider'.tr),
                 trailing: DropdownButton<String>(
                   value: _captchaProvider,
                   items: const [
@@ -310,10 +308,10 @@ class _Setting extends State<SettingPage> {
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: TextField(
                   controller: _captchaKeyController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'API Key',
-                    hintText: '粘贴打码平台的 clientKey',
-                    border: OutlineInputBorder(),
+                    hintText: 'cfApiKeyHint'.tr,
+                    border: const OutlineInputBorder(),
                     isDense: true,
                   ),
                   obscureText: true,
@@ -322,21 +320,19 @@ class _Setting extends State<SettingPage> {
                   },
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text(
-                  '说明：Cloudflare 在该 IDN 域名下会让 WebView 的 Turnstile '
-                  '崩溃，因此「自动过」只能依赖打码平台。启用后无需再手动导入，'
-                  '验证将自动完成。未配置 Key 时仍走原有的 managed 流程/手动导入。',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  'cfAutoSolveNote'.tr,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ),
             ],
           ),
           ListTile(
             leading: const Icon(Icons.verified_user_outlined),
-            title: const Text('清除 Cloudflare 验证缓存'),
-            subtitle: const Text('验证失效或异常时，可清除后重新验证'),
+            title: Text('cfClearCache'.tr),
+            subtitle: Text('cfClearCacheSub'.tr),
             onTap: () async {
               await CloudflareCookieJar.instance.clear();
               // 同步重置常驻桥接 WebView（含清空平台 cookie 仓库），
@@ -344,7 +340,7 @@ class _Setting extends State<SettingPage> {
               await CloudflareBridge.instance.reset();
               CloudflareSolver.clearFailedHosts();
               _refreshClearance();
-              Get.snackbar('提示', 'Cloudflare 验证缓存已清除');
+              Get.snackbar('tip'.tr, 'cfClearDone'.tr);
             },
           ),
           ListTile(
@@ -354,10 +350,10 @@ class _Setting extends State<SettingPage> {
                   : Icons.login_outlined,
               color: _hasClearance ? Colors.green : null,
             ),
-            title: const Text('导入 cf_clearance 绕过验证'),
+            title: Text('cfImport'.tr),
             subtitle: Text(_hasClearance
-                ? '已导入，后续请求将跳过 WebView 验证'
-                : 'WebView 无法完成验证时，从浏览器复制 cookie 绕过'),
+                ? 'cfImportedSub'.tr
+                : 'cfNotImportedSub'.tr),
             onTap: _importCloudflareCookie,
           ),
         ],

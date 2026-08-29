@@ -115,9 +115,9 @@ class _ComicDetail extends State<ComicDetail> {
       for (var element in widget.list!) {
         addItem(element);
       }
-      /** 等待列表加载好再跳转 */
-      await Future.delayed(const Duration(milliseconds: 800));
-      itemScrollController.jumpTo(index: widget.initIndex);
+      // 定位到历史阅读位置由 _PhotoList 内部完成：
+      // 固定延迟 jumpTo 会与图片异步加载竞态（占位 150px → 真实 2000px，
+      // 上方内容增长把目标页顶出屏幕），需带稳定确认的重试机制。
     } else {
       var result = await apiServer.getDetail(widget.options.id, widget.page);
       for (var element in result.data) {
@@ -208,6 +208,8 @@ class _ComicDetail extends State<ComicDetail> {
                         child: CachedNetworkImage(
                           imageUrl: widget.options.image,
                           httpHeaders: imageHeadersFor(widget.options.image),
+                          // 与列表项一致：限制解码宽度，避免全尺寸大图进内存
+                          memCacheWidth: 720,
                           fit: BoxFit.cover,),
                       ),
                       const Padding(
@@ -293,9 +295,21 @@ class __PhotoListWidget extends State<_PhotoList> {
   final ScrollOffsetListener scrollOffsetListener =
       ScrollOffsetListener.create();
 
+  /// 初始定位是否已完成（完成后才允许把位置写入历史记录）。
+  bool _initialJumpDone = false;
+
+  /// 用户是否已手动滑动（滑动后立即放弃定位重试，尊重用户操作）。
+  bool _userInteracted = false;
+
+  /// 定位重试计数与连续稳定确认计数。
+  int _jumpAttempts = 0;
+  int _stableChecks = 0;
+  Timer? _jumpRetryTimer;
+
   /// 动态拼装列表
   void _retrieveData() {
     Future.delayed(const Duration(milliseconds: 100)).then((e) {
+      if (!mounted) return;
       setState(() {
         int start = _list.length - 1;
         //重新构建列表
@@ -314,8 +328,59 @@ class __PhotoListWidget extends State<_PhotoList> {
   @override
   void initState() {
     super.initState();
-    _retrieveData();
+    _fillInitialBatch();
     itemPositionsListener.itemPositions.addListener(_onListCurrentChange);
+    if (widget.initIndex > 0) {
+      // 等首帧布局完成后再开始定位（图片此时还是占位高度，
+      // 定位与纠偏由 _tryInitialJump 的重试循环负责）。
+      _jumpRetryTimer = Timer(const Duration(milliseconds: 400), _tryInitialJump);
+    } else {
+      _initialJumpDone = true;
+    }
+  }
+
+  /// 首批直接铺到 initIndex+10：jumpTo 要求索引在 itemCount 内，
+  /// 原先首批只铺 10 项，initIndex > 10 时定位直接失效。
+  void _fillInitialBatch() {
+    final end = (widget.initIndex + 10) > widget.list.length
+        ? widget.list.length
+        : widget.initIndex + 10;
+    _list.insertAll(0, widget.list.sublist(0, end));
+  }
+
+  /// 带稳定确认的初始定位。
+  ///
+  /// 图片异步加载导致 item 高度从占位 150px 涨到真实值，上方内容增长
+  /// 会持续把锚定页顶出视口。策略：目标页未贴近视口顶部就重新 jumpTo；
+  /// 已到位则继续观察（连续 3 次确认稳定才算完成）；用户手动滑动或
+  /// 重试超限时放弃。完成前不写历史（避免错位 index 覆盖真实进度）。
+  void _tryInitialJump() {
+    if (!mounted || _initialJumpDone || _userInteracted) return;
+    if (_jumpAttempts++ > 12) {
+      _initialJumpDone = true;
+      return;
+    }
+    ItemPosition? target;
+    for (final p in itemPositionsListener.itemPositions.value) {
+      if (p.index == widget.initIndex) {
+        target = p;
+        break;
+      }
+    }
+    // itemLeadingEdge ∈ [0,1]（视口内），0 为顶部；负值表示在视口上方
+    final aligned = target != null &&
+        target.itemLeadingEdge > -0.05 &&
+        target.itemLeadingEdge < 0.3;
+    if (aligned) {
+      if (++_stableChecks >= 3) {
+        _initialJumpDone = true;
+        return;
+      }
+    } else {
+      _stableChecks = 0;
+      widget.itemScrollController?.jumpTo(index: widget.initIndex);
+    }
+    _jumpRetryTimer = Timer(const Duration(milliseconds: 600), _tryInitialJump);
   }
 
   @override
@@ -329,6 +394,7 @@ class __PhotoListWidget extends State<_PhotoList> {
 
   @override
   void dispose() {
+    _jumpRetryTimer?.cancel();
     itemPositionsListener.itemPositions.removeListener(_onListCurrentChange);
     super.dispose();
   }
@@ -337,15 +403,22 @@ class __PhotoListWidget extends State<_PhotoList> {
     var to = itemPositionsListener.itemPositions.value.first.index;
     // historyStorage.saveIndex(id: widget.id, index: to);
     // 包含一个下一章, 假设5张图片 0,1,2,3,4 length=5, 下一章=5
+    // 定位完成前不写历史：初始 jump 过程中视口短暂停在错误的页，
+    // 会把错误 index 覆盖进历史记录（真实进度丢失的根因之一）。
     if (to >= 0 && to < widget.list.length) {
       widget.setCurrentIndex!(to);
-      historyStorage.saveIndex(id: widget.id, index: to);
+      if (_initialJumpDone) {
+        historyStorage.saveIndex(id: widget.id, index: to);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ScrollablePositionedList.builder(
+    return Listener(
+        // 用户一旦触摸列表就放弃自动定位重试，尊重用户操作
+        onPointerDown: (_) => _userInteracted = true,
+        child: ScrollablePositionedList.builder(
         physics: const ClampingScrollPhysics(), //去掉弹性,
         // padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: _list.length,
@@ -361,7 +434,9 @@ class __PhotoListWidget extends State<_PhotoList> {
         itemBuilder: (context, index) {
           var next = index + 1;
           // 预先缓存下一张内容
-          if (_list.length < next && _list[next].title != loadingTag) {
+          // 原条件 `_list.length < next` 恒为 false（next 最多等于 length），
+          // 预加载分支从未执行。改为 next 在有效范围内且非表尾标记时预取。
+          if (next < _list.length && _list[next].title != loadingTag) {
             _preloader.preloadImage(_list[next].url, context);
           }
           //如果到了表尾
@@ -412,7 +487,7 @@ class __PhotoListWidget extends State<_PhotoList> {
               }
             },
           );
-        });
+        }));
   }
 }
 
@@ -420,12 +495,20 @@ typedef _ListPhotoItemTap = void Function();
 typedef _ListPhotoItemTapDown = void Function(TapDownDetails detail);
 
 class _ListPhotoItem extends StatelessWidget {
-  const _ListPhotoItem(
+  // 非 const 构造：_headers 是 late final（构造后惰性求值一次），
+  // 与 const 构造不兼容；调用处本就不使用 const。
+  _ListPhotoItem(
       {Key? key, required this.item, this.onTapDown, this.onLongPress})
       : super(key: key);
   final _Photo item;
   final _ListPhotoItemTap? onLongPress;
   final _ListPhotoItemTapDown? onTapDown;
+
+  /// headers 只在构造时计算一次。此前每次 build 都调 imageHeadersFor()
+  /// （Uri.parse + cookie 拼接 + Map 分配），下载进度每 tick 都会 rebuild
+  /// item，滚动中高频执行造成 GC 压力。
+  late final Map<String, String> _headers = imageHeadersFor(item.url);
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -441,7 +524,16 @@ class _ListPhotoItem extends StatelessWidget {
             child: Center(
               child: CachedNetworkImage(
                 imageUrl: item.url,
-                httpHeaders: imageHeadersFor(item.url),
+                httpHeaders: _headers,
+                // 内存解码降采样：漫画原图约 1200×1800，全尺寸解码每张
+                // ~8.6MB RGBA，叠加 minCacheExtent 1.4 屏的预渲染区，
+                // 解码缓存与 GPU 纹理压力直接表现为滚动掉帧。限制到
+                // 2 倍物理屏宽，视觉无差异、内存降 60%+。
+                memCacheWidth:
+                    (MediaQuery.of(context).size.width *
+                            MediaQuery.of(context).devicePixelRatio *
+                            2)
+                        .round(),
                 fit: BoxFit.fitWidth,
                 progressIndicatorBuilder: (context, url, downloadProgress) =>
                     CircularProgressIndicator(value: downloadProgress.progress),
