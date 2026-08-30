@@ -23,6 +23,28 @@ const kBrowserUserAgent =
     'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) '
     'Chrome/124.0.0.0 Mobile Safari/537.36';
 
+/// UA 预设：部分设备 WebView 原生 UA 无法通过 Cloudflare 验证，
+/// 允许用户在设置页选择预设 UA 覆写（对 WebView 与 Dart 请求同时生效）。
+/// key 为设置页展示的标识，value null 表示「默认」（设备原生 UA，
+/// 验证时自动剥 wv 标记）。
+const Map<String, String?> kUaPresets = {
+  'default': null,
+  'pc': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'androidTablet': 'Mozilla/5.0 (Linux; Android 13; SM-X910) '
+      'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 '
+      'Safari/537.36',
+  'androidPhone': kBrowserUserAgent,
+  'ipad': 'Mozilla/5.0 (iPad; CPU OS 17_5 like Mac OS X) '
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 '
+      'Safari/604.1',
+  'ios': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) '
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 '
+      'Safari/604.1',
+  'macos': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+      'AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+};
+
 /// 目标站点的当前域名：见 [TargetHostResolver.host]（运行时从
 /// [kBuiltinHostCandidates] 或发布页解析，域名轮换频繁）。
 /// 注意：这些是 IDN/punycode 域名。Cloudflare 交互式 Turnstile 在 Android
@@ -366,6 +388,10 @@ class CloudflareCookieJar {
   final Map<String, String> _uaStore = {};
   static const _prefsKey = '__cf_cookie_jar';
   static const _uaPrefsKey = '__cf_user_agents';
+  static const _uaPresetPrefsKey = '__cf_ua_preset';
+
+  /// 用户选择的 UA 预设（kUaPresets 的 key，'default' 表示用设备原生 UA）。
+  String _uaPreset = 'default';
 
   /// 启动时调用，从本地恢复已保存的 clearance cookie。
   Future<void> init() async {
@@ -384,6 +410,10 @@ class CloudflareCookieJar {
         decoded.forEach((host, ua) {
           _uaStore[host] = ua as String;
         });
+      }
+      final preset = prefs.getString(_uaPresetPrefsKey);
+      if (preset != null && kUaPresets.containsKey(preset)) {
+        _uaPreset = preset;
       }
     } catch (_) {
       // 读取失败不影响主流程
@@ -450,6 +480,22 @@ class CloudflareCookieJar {
     _uaStore[host] = userAgent;
     _persistUas();
   }
+
+  /// 当前 UA 预设 key（kUaPresets 之一）。
+  String get uaPreset => _uaPreset;
+
+  /// 设置 UA 预设并持久化。'default' 表示回到设备原生 UA。
+  Future<void> setUaPreset(String preset) async {
+    if (!kUaPresets.containsKey(preset)) return;
+    _uaPreset = preset;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_uaPresetPrefsKey, preset);
+    } catch (_) {}
+  }
+
+  /// 预设对应的 UA 字符串；'default' 或未设预设返回 null（用设备原生 UA）。
+  String? get uaPresetValue => kUaPresets[_uaPreset];
 
   /// 某 host 已同步的 UA（导入旁路保存的）；未导入过则返回 null（用默认 UA）。
   String? userAgentFor(String host) => _uaStore[host];

@@ -19,10 +19,12 @@ Map<String, String> _commonHeaders() => {
       'user-agent': kBrowserUserAgent,
     };
 
-/// 当前应使用的 UA：优先用导入 cf_clearance 时同步的浏览器 UA
-/// （clearance 与 UA 绑定，重放需一致），否则用默认 UA。
-String currentUserAgent() => CloudflareCookieJar.instance
-        .userAgentFor(TargetHostResolver.host) ??
+/// 当前应使用的 UA：优先级为 用户预设（kUaPresets，部分设备原生 UA
+/// 过不了验证时手动指定）> 导入 cf_clearance 时同步的浏览器 UA
+/// （clearance 与 UA 绑定，重放需一致）> 默认 UA。
+String currentUserAgent() =>
+    CloudflareCookieJar.instance.uaPresetValue ??
+    CloudflareCookieJar.instance.userAgentFor(TargetHostResolver.host) ??
     kBrowserUserAgent;
 
 /// 图片请求头：附加该 host 已保存的 Cloudflare cookie

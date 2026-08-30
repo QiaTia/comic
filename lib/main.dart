@@ -167,6 +167,19 @@ class _MyHomePageState extends State<MyHomePage>
                           ))
                       .toList()),
               actions: [
+                // 手动打开 Cloudflare 验证页：数据一直加载不出时，
+                // 用户可主动唤起 WebView 完成验证，通过后自动关闭。
+                IconButton(
+                    tooltip: 'cfManualVerify'.tr,
+                    onPressed: () async {
+                      final bridge = CloudflareBridge.instance;
+                      if (bridge.ready) {
+                        Get.snackbar('tip'.tr, 'cfReady'.tr);
+                        return;
+                      }
+                      await bridge.openManualVerify();
+                    },
+                    icon: const Icon(Icons.verified_user_outlined)),
                 IconButton(
                     tooltip: 'History',
                     onPressed: () {

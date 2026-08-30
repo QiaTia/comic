@@ -42,6 +42,9 @@ class CloudflareBridge extends ChangeNotifier {
   /// 本次 solve 是否允许弹验证页（由 solve 的 showUi 参数决定）。
   bool _solveShowUi = true;
 
+  /// 当前进行中 solve 的起始时间（用于并发加入时的 UI 升级宽限期判断）。
+  DateTime? _activeSolveStart;
+
   /// 是否已应用「原生 UA 去 wv 标记」。
   bool _nativeUaApplied = false;
   Uri? _pendingUri;
@@ -126,6 +129,15 @@ class CloudflareBridge extends ChangeNotifier {
   Future<void> _applyNativeUa() async {
     if (_nativeUaApplied) return;
     try {
+      // 用户在设置页选择了 UA 预设（部分设备原生 UA 过不了验证）：
+      // 直接采用预设，跳过「取原生 UA 剥 wv」流程。
+      final preset = CloudflareCookieJar.instance.uaPresetValue;
+      if (preset != null) {
+        await controller.setUserAgent(preset);
+        _nativeUaApplied = true;
+        cfLog('已应用用户预设 UA（${CloudflareCookieJar.instance.uaPreset}）');
+        return;
+      }
       await controller.setUserAgent(null); // 恢复系统默认 UA
       await controller.loadRequest(Uri.parse('about:blank'));
       await Future.delayed(const Duration(milliseconds: 400));
@@ -226,16 +238,36 @@ class CloudflareBridge extends ChangeNotifier {
     // 并发保护：重试循环的两轮间隙 _verifying=false，其他请求此时调
     // solve 会开第二个循环、状态互相干扰——共享同一个进行中的 solve。
     final active = _activeSolve;
-    if (active != null) return active;
+    if (active != null) {
+      // UI 升级：进行中的是静默预热（如启动 prewarm），而本次调用方
+      // 需要展示验证页（用户请求触发，默认 showUi=true）。交互式挑战
+      // 必须用户手动点击，一直静默用户永远没机会点。
+      // 带 20s 宽限期：managed 挑战通常 10s 内自动通过，刚启动就加入的
+      // 首页请求保持静默（保护“启动无闪现”体验），超过宽限期仍没过
+      // （大概率是交互式）才立即弹验证页。
+      final elapsed = _activeSolveStart == null
+          ? null
+          : DateTime.now().difference(_activeSolveStart!);
+      if (showUi &&
+          !_uiVisible &&
+          (elapsed == null || elapsed.inSeconds > 20)) {
+        _uiVisible = true;
+        notifyListeners();
+        cfLog('真实请求加入静默预热（已运行 ${elapsed?.inSeconds ?? 0}s），升级为可见验证页');
+      }
+      return active;
+    }
     _solveShowUi = showUi;
     final completer = Completer<CloudflareSolveResult?>();
     _activeSolve = completer.future;
+    _activeSolveStart = DateTime.now();
     try {
       final res = await _solveWithRetry(uri, completer);
       if (!completer.isCompleted) completer.complete(res);
       return res;
     } finally {
       _activeSolve = null;
+      _activeSolveStart = null;
     }
   }
 
@@ -255,6 +287,14 @@ class CloudflareBridge extends ChangeNotifier {
       if (_userCancelled) {
         cfLog('用户已取消，终止验证重试');
         break;
+      }
+      // 静默验证第 1 轮失败后自动转可见：managed 挑战没能在首轮自动
+      // 通过，大概率是交互式（需用户点击），继续静默只会白白耗完
+      // 剩余两轮。弹出验证页给用户手动点击的机会。
+      if (round > 1 && !_uiVisible) {
+        _uiVisible = true;
+        notifyListeners();
+        cfLog('静默验证首轮未通过，第 $round 轮转为可见（等待用户手动点击）');
       }
       final res = await _solveOnce(uri, round);
       if (res != null) {
@@ -385,14 +425,44 @@ class CloudflareBridge extends ChangeNotifier {
   /// WebView 在控制器创建后即可无头运行（不需要挂进 Widget 树），
   /// 成功则首页请求直接就绪、用户全程无感知；失败不弹任何 UI，
   /// 由用户手动重试时再走带 UI 的验证。
+  ///
+  /// 本地已有 cf_clearance 时不预热：首次请求直接 Dart 带 cookie 直连
+  /// （零 WebView 开销），被挑战时才走 [_tryRevive]/完整验证。
   Future<void> prewarm(Uri uri) async {
     if (_ready || _activeSolve != null) return;
+    if (CloudflareCookieJar.instance.hasClearanceFor(uri.host)) {
+      cfLog('本地已有 cf_clearance，跳过启动预热，首请求走 Dart 直连');
+      return;
+    }
     try {
       final res = await solve(uri, showUi: false);
       cfLog('启动后台预热${res != null ? '成功' : '未通过（等待用户手动重试）'}');
     } catch (e) {
       cfLog('启动后台预热异常: $e');
     }
+  }
+
+  /// 用户从 AppBar 图标主动打开验证页：
+  /// - 静默预热进行中 → 立即升级为可见（不受 20s 宽限期限制，
+  ///   用户主动点击就是要看验证页）；
+  /// - 无验证进行 → 发起一次带 UI 的完整验证；
+  /// - 已就绪 → 直接返回（调用方负责提示）。
+  ///
+  /// 验证通过后 [_solveWithRetry] 结束时自动置 _uiVisible=false，
+  /// 验证页自动关闭，无需额外处理。
+  Future<void> openManualVerify() async {
+    if (_ready) return;
+    if (_activeSolve != null) {
+      if (!_uiVisible) {
+        _uiVisible = true;
+        notifyListeners();
+        cfLog('用户手动打开验证页，静默预热升级为可见');
+      }
+      return;
+    }
+    final uri =
+        _pendingUri ?? Uri.parse('https://${TargetHostResolver.host}/');
+    await solve(uri, showUi: true);
   }
 
   /// 重置闲置瘦身倒计时：每次取数后 60s 无新请求才真正瘦身。
@@ -841,6 +911,18 @@ class CloudflareBridge extends ChangeNotifier {
   /// 应用已保存（导入旁路同步）的 UA——cf_clearance 与签发它的浏览器 UA 绑定，
   /// 重放时 UA 不一致会被 Cloudflare 重新挑战。
   Future<void> _applyUserAgent(String host) async {
+    // 用户预设优先于导入 UA（预设是用户显式选择，用于绕开原生 UA 过不了
+    // 验证的设备问题）
+    final preset = CloudflareCookieJar.instance.uaPresetValue;
+    if (preset != null) {
+      try {
+        await controller.setUserAgent(preset);
+        cfLog('桥接已应用用户预设 UA: $preset');
+      } catch (e) {
+        cfLog('应用预设 UA 失败: $e');
+      }
+      return;
+    }
     final ua = CloudflareCookieJar.instance.userAgentFor(host);
     if (ua == null) return;
     try {

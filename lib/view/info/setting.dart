@@ -330,6 +330,38 @@ class _Setting extends State<SettingPage> {
             ],
           ),
           ListTile(
+            leading: const Icon(Icons.devices_other),
+            title: Text('cfUaPreset'.tr),
+            subtitle: Text('cfUaPresetSub'.tr),
+            trailing: DropdownButton<String>(
+              value: CloudflareCookieJar.instance.uaPreset,
+              items: [
+                'default',
+                'pc',
+                'androidTablet',
+                'androidPhone',
+                'ipad',
+                'ios',
+                'macos'
+              ]
+                  .map((k) => DropdownMenuItem(
+                        value: k,
+                        child: Text('ua_$k'.tr),
+                      ))
+                  .toList(),
+              onChanged: (v) async {
+                if (v == null) return;
+                await CloudflareCookieJar.instance.setUaPreset(v);
+                // 切换 UA 后旧 clearance 必然失效（与 UA 绑定），
+                // 重置验证状态让下次请求重新验证
+                await CloudflareBridge.instance.reset();
+                CloudflareSolver.clearFailedHosts();
+                setState(() {});
+                Get.snackbar('tip'.tr, 'cfUaPresetApplied'.tr);
+              },
+            ),
+          ),
+          ListTile(
             leading: const Icon(Icons.verified_user_outlined),
             title: Text('cfClearCache'.tr),
             subtitle: Text('cfClearCacheSub'.tr),
